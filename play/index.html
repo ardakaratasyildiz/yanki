@@ -48,6 +48,8 @@ body{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px
 #hRound{font-family:var(--f-num);font-size:30px;line-height:1;color:var(--past);font-variant-numeric:tabular-nums}
 #hCombo{font-family:var(--f-num);font-size:18px;color:var(--gold);opacity:0;transition:opacity .2s, transform .2s}
 #hCombo.on{opacity:1}
+#hCombo.fever{color:#ff9a3d;text-shadow:0 0 14px rgba(255,140,50,.8)}
+#hTime{font-family:var(--f-num);font-size:12px;color:var(--dim);font-variant-numeric:tabular-nums}
 #hCombo.pop{transform:scale(1.35)}
 #pauseBtn{position:fixed;z-index:4;top:calc(10px + env(safe-area-inset-top,0px));right:max(12px,env(safe-area-inset-right,0px));
   width:36px;height:36px;border-radius:50%;border:1px solid rgba(138,143,179,.35);background:transparent;color:var(--dim);font:700 12px var(--f-num);cursor:pointer}
@@ -80,6 +82,10 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 .alt small{font-family:var(--f-num);color:var(--dim);font-size:12px}
 .chip{font-size:13px;padding:9px 16px;border-radius:999px;border:1px solid rgba(138,143,179,.35);background:rgba(10,10,22,.5);color:var(--ink);cursor:pointer}
 .chip:hover{border-color:var(--ink)}
+.tog.off{color:var(--dim);border-style:dashed}
+.seg{display:inline-flex;border:1px solid rgba(138,143,179,.35);border-radius:999px;overflow:hidden;background:rgba(10,10,22,.5)}
+.seg button{font:700 13px var(--f-num);letter-spacing:.08em;padding:9px 14px;background:transparent;color:var(--dim);border:0;cursor:pointer}
+.seg button.on{background:var(--you);color:var(--bg)}
 .meta{font-size:13px;color:var(--dim);letter-spacing:.06em}
 .meta b{font-family:var(--f-num);color:var(--ink);font-weight:700;margin-left:6px}
 .hint{font-size:12px;color:var(--dim);letter-spacing:.08em;margin:6px 0 0}
@@ -203,7 +209,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 <canvas id="cv" aria-label="Yankı oyun alanı"></canvas>
 
 <div id="hud" hidden>
-  <div class="hud-l"><span class="lbl" data-i="score">skor</span><b id="hScore">0</b></div>
+  <div class="hud-l"><span class="lbl" data-i="score">skor</span><b id="hScore">0</b><span id="hTime" hidden></span></div>
   <div class="hud-c"><b id="hRound">0</b><span class="lbl" id="hLbl">yankı</span></div>
   <div class="hud-r"><b id="hCombo">×1</b></div>
 </div>
@@ -219,8 +225,9 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
   <div class="meta"><span data-i="best">En iyi</span><b id="mBest">0</b></div>
   <button id="profBtn"><span data-i="lvlWord">Seviye</span><b id="mLvl">1</b><span class="bar"><i id="mBar"></i></span><em data-i="profile"></em></button>
   <div class="row">
-    <button id="sndBtn" class="chip"></button>
-    <button id="langBtn" class="chip"></button>
+    <button id="sndBtn" class="chip tog"></button>
+    <button id="musBtn" class="chip tog"></button>
+    <div class="seg" id="langSeg" role="group" aria-label="Dil / Language"><button data-l="tr">TR</button><button data-l="en">EN</button></div>
   </div>
   <p class="hint" data-i="controls"></p>
 </section>
@@ -234,7 +241,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
   <p id="oNew" hidden></p>
   <div class="stats">
     <div><b id="oScore">0</b><span data-i="score"></span></div>
-    <div><b id="oBest">0</b><span data-i="best"></span></div>
+    <div><b id="oBest">0</b><span id="oBestL"></span></div>
     <div><b id="oNear">0</b><span data-i="nearS"></span></div>
     <div><b id="oEaten">0</b><span data-i="eatenS"></span></div>
   </div>
@@ -335,6 +342,7 @@ prefs.lv = prefs.lv || {}; prefs.ms = Array.isArray(prefs.ms) ? prefs.ms : []; p
 const ST = prefs.st;
 ['gems', 'near', 'eaten', 'timeouts', 'combo', 'cleared'].forEach(k => { ST[k] = ST[k] || 0; }); ST.kill = ST.kill || {};
 if (prefs.snd === undefined) prefs.snd = true;
+if (prefs.mus === undefined) prefs.mus = true;
 let mem = load(MEM_KEY, {}); if (!mem || typeof mem !== 'object') mem = {};
 let gal = load(GAL_KEY, []); if (!Array.isArray(gal)) gal = [];
 
@@ -343,7 +351,7 @@ const T = {
   tr: {
     tag: 'Altını <em>topla</em>. Geçmişine <i>dokunma</i>.',
     play: 'OYNA', daily: 'Günün Yankısı', best: 'En iyi', echoes: 'yankı', score: 'skor', gold: 'altın',
-    controls: 'fare · parmak · ok tuşları', controlsTouch: 'parmağını ekranın herhangi bir yerinde sürükle', sndOn: '♪ Ses açık', sndOff: '♪ Ses kapalı', lang: 'English',
+    controls: 'fare · parmak · ok tuşları', controlsTouch: 'parmağını ekranın herhangi bir yerinde sürükle', sndOn: 'Ses: Açık', sndOff: 'Ses: Kapalı', musOn: '♪ Müzik: Açık', musOff: '♪ Müzik: Kapalı', lang: 'English',
     t1: 'Altını topla.', t2: 'O kırmızı şey… sensin. Bir tur önceki sen.', t3: 'Her hareketin sana geri döner.',
     t4: 'Mor küre: geçmişini ye!', eat: 'YE ONLARI!', near: 'KIL PAYI', quick: 'HIZLI',
     killedBy: k => `Seni ${k}. turdaki sen yakaladı.`, killedPrev: 'Bir önceki halin seni yakaladı.',
@@ -371,7 +379,7 @@ const T = {
     ms: {
       near1: n => `Tek oyunda ${n} kıl payı yap`, round1: n => `Tek oyunda ${n} yankıya ulaş`, combo1: n => `×${n} komboya ulaş`,
       eatT: n => `Mor küreyle ${n} yankı ye`, gemsT: n => `Toplam ${n} altın topla`, daily: () => 'Günün Yankısı’nı oyna',
-      starsT: n => `Bölümlerde ${n} yeni ★ kazan`, gamesT: n => `${n} oyun oyna`, nearT: n => `Toplam ${n} kıl payı yap`
+      starsT: n => `Bölümlerde ${n} yeni ★ kazan`, gamesT: n => `${n} oyun oyna`, nearT: n => `Toplam ${n} kıl payı yap`, fever1: n => `Tek oyunda alev modunda ${n} altın al`
     },
     sGames: 'oyun', sGems: 'altın', sNear: 'kıl payı', sEaten: 'yenen geçmiş', sBest: 'en iyi yankı', sBestScore: 'en iyi skor',
     sCombo: 'en iyi kombo', sStars: 'yıldız', sStreak: 'en uzun seri', sCleared: 'geçilen bölüm',
@@ -384,12 +392,14 @@ const T = {
     chalStart: (nm, n) => `${nm}: ${n} yankı. Geç onu.`, chalBeat: nm => `${nm} geride kaldı! Artık kendi geçmişin.`,
     chalWin: (nm, a, b) => `${nm} ${a} · SEN ${b} · KAZANDIN`, chalLose: (nm, a, b) => `${nm} ${a} · SEN ${b}`,
     chalShare: (n, url) => `YANKI\n${n} kez kendimden kaçtım. Benim geçmişimle oynayıp beni geçebilir misin?\n${url}`,
-    linkCopied: 'Bağlantı kopyalandı'
+    linkCopied: 'Bağlantı kopyalandı',
+    fever: 'ALEV! Puanlar ×2', feverOff: 'Alev söndü', sTime: n => `${n} sn altı`, timeS: 'süre', sec: n => `${n} sn`,
+    half: '1/2', bestTime: 'en iyi süre'
   },
   en: {
     tag: 'Grab the <em>gold</em>. Don’t touch your <i>past</i>.',
     play: 'PLAY', daily: 'Daily Echo', best: 'Best', echoes: 'echoes', score: 'score', gold: 'gold',
-    controls: 'mouse · finger · arrow keys', controlsTouch: 'drag your finger anywhere on the screen', sndOn: '♪ Sound on', sndOff: '♪ Sound off', lang: 'Türkçe',
+    controls: 'mouse · finger · arrow keys', controlsTouch: 'drag your finger anywhere on the screen', sndOn: 'Sound: On', sndOff: 'Sound: Off', musOn: '♪ Music: On', musOff: '♪ Music: Off', lang: 'Türkçe',
     t1: 'Grab the gold.', t2: 'That red thing… is you. You, one round ago.', t3: 'Every move you make comes back.',
     t4: 'Purple orb: eat your past!', eat: 'EAT THEM!', near: 'CLOSE CALL', quick: 'QUICK',
     killedBy: k => `You were caught by yourself from round ${k}.`, killedPrev: 'Your previous self caught you.',
@@ -417,7 +427,7 @@ const T = {
     ms: {
       near1: n => `Make ${n} close calls in one game`, round1: n => `Reach ${n} echoes in one game`, combo1: n => `Reach a ×${n} combo`,
       eatT: n => `Eat ${n} echoes with the purple orb`, gemsT: n => `Collect ${n} gold in total`, daily: () => 'Play the Daily Echo',
-      starsT: n => `Earn ${n} new ★ in levels`, gamesT: n => `Play ${n} games`, nearT: n => `Make ${n} close calls in total`
+      starsT: n => `Earn ${n} new ★ in levels`, gamesT: n => `Play ${n} games`, nearT: n => `Make ${n} close calls in total`, fever1: n => `Grab ${n} gold while blazing in one game`
     },
     sGames: 'games', sGems: 'gold', sNear: 'close calls', sEaten: 'past eaten', sBest: 'best echoes', sBestScore: 'best score',
     sCombo: 'best combo', sStars: 'stars', sStreak: 'longest streak', sCleared: 'levels cleared',
@@ -430,7 +440,9 @@ const T = {
     chalStart: (nm, n) => `${nm}: ${n} echoes. Beat that.`, chalBeat: nm => `You passed ${nm}! Your own past from here.`,
     chalWin: (nm, a, b) => `${nm} ${a} · YOU ${b} · YOU WIN`, chalLose: (nm, a, b) => `${nm} ${a} · YOU ${b}`,
     chalShare: (n, url) => `YANKI\nI outran myself ${n} times. Can you beat me playing against my past?\n${url}`,
-    linkCopied: 'Link copied'
+    linkCopied: 'Link copied',
+    fever: 'BLAZE! Points ×2', feverOff: 'The blaze went out', sTime: n => `under ${n}s`, timeS: 'time', sec: n => `${n}s`,
+    half: '1/2', bestTime: 'best time'
   }
 };
 let lang = prefs.lang || ((navigator.language || '').toLowerCase().startsWith('tr') ? 'tr' : 'en');
@@ -459,7 +471,11 @@ const WORLDS = [
   { tr: ['Duvarlar', 'Duvarlar seni durdurur. Yankıların ise yollarına devam eder.'], en: ['Walls', 'Walls stop you. Your echoes keep going.'], mod: (t, i) => ({ walls: WALLS[i] }) },
   { tr: ['Hızlı Geçmiş', 'Yankıların senden hızlı koşuyor.'], en: ['Fast Past', 'Your echoes run faster than you.'], mod: t => ({ echoK: 1.15 + 0.3 * t }) },
   { tr: ['Karanlık', 'Sadece etrafını görebiliyorsun. Yankılar karanlıktan çıkar.'], en: ['Darkness', 'You only see what’s around you. Echoes step out of the dark.'], mod: t => ({ dark: 0.44 - 0.16 * t }) },
-  { tr: ['Ayna', 'Yankıların ayna görüntün. Sağa gittiysen, o sola gider.'], en: ['Mirror', 'Your echoes are your mirror image. Go right, and they go left.'], mod: t => ({ mirror: true, echoK: 1 + 0.15 * t }) }
+  { tr: ['Ayna', 'Yankıların ayna görüntün. Sağa gittiysen, o sola gider.'], en: ['Mirror', 'Your echoes are your mirror image. Go right, and they go left.'], mod: t => ({ mirror: true, echoK: 1 + 0.15 * t }) },
+  { tr: ['Kaçan Altın', 'Altın senden kaçıyor. Beklersen uzaklaşır, köşeye sıkıştır.'], en: ['Runaway Gold', 'The gold runs from you. Wait and it gets away; corner it.'], mod: t => ({ flee: 0.1 + 0.12 * t }) },
+  { tr: ['Çift Altın', 'Her turda iki altın var. İkisini de al, sırayı sen seç.'], en: ['Double Gold', 'Two pieces of gold every round. Grab both, in any order.'], mod: t => ({ dbl: true, fuse0: 6.4 - 0.6 * t, fuseMin: 3.6 }) },
+  { tr: ['Dar Karanlık', 'Küçük bir oda ve neredeyse hiç ışık.'], en: ['Dark Room', 'A small room and almost no light.'], mod: t => ({ box: 0.84 - 0.24 * t, dark: 0.46 - 0.14 * t }) },
+  { tr: ['Fırtına', 'Kısa fitil, hızlı geçmiş ve başkalarının izleri. Hepsi birden.'], en: ['Storm', 'Short fuse, fast past and other people’s traces. All at once.'], mod: t => ({ fuse0: 4.2 - 0.8 * t, fuseMin: 2.2, pre: 1 + Math.round(t * 2), echoK: 1.1 + 0.15 * t }) }
 ];
 const PER_WORLD = 10, BOSS = PER_WORLD - 1;
 const GOALS = [5, 6, 7, 7, 8, 9, 9, 10, 11];
@@ -467,9 +483,12 @@ const lid = (w, i) => `w${w + 1}-${i + 1}`;
 function levelCfg(w, i) {
   const boss = i === BOSS, t = boss ? 1 : i / (BOSS - 1);
   const goal = boss ? 10 : Math.max(4, GOALS[i] - (w >= 4 ? 1 : 0));
-  const c = Object.assign({ w, i, id: lid(w, i), goal, boss, fuse0: 5.2, fuseMin: 2.6, box: 1, pre: 0, walls: null, echoK: 1, dark: 0, mirror: false },
+  const c = Object.assign({ w, i, id: lid(w, i), goal, boss, fuse0: 5.2, fuseMin: 2.6, box: 1, pre: 0, walls: null, echoK: 1, dark: 0, mirror: false, flee: 0, dbl: false },
     WORLDS[w].mod(t, boss ? WALLS.length - 1 : i));
-  c.s2 = Math.round(goal * 1.6) * 10; c.s3 = Math.round(goal * 2.8) * 10;
+  // ★★ is a score, ★★★ is a time: the faster you clear it, the better
+  c.s2 = goal * 40;
+  const slow = (c.walls ? 1.35 : 1) * (c.dark ? 1.2 : 1) * (c.pre ? 1.15 : 1) * (c.dbl ? 1.9 : 1) * (c.flee ? 1.25 : 1) * (c.box < 1 ? 0.9 : 1) * (boss ? 1.15 : 1);
+  c.t3 = Math.round(goal * 2 * slow);
   return c;
 }
 const lrec = (w, i) => prefs.lv[lid(w, i)] || {};
@@ -494,7 +513,8 @@ const MS = {
   daily: { n: () => 1, xp: 30 },
   starsT: { n: l => 3 + Math.min(9, l / 3 | 0), xp: 60 },
   gamesT: { n: l => 3 + Math.min(5, l / 4 | 0), xp: 30 },
-  nearT: { n: l => 10 + l * 2, xp: 40 }
+  nearT: { n: l => 10 + l * 2, xp: 40 },
+  fever1: { n: l => 2 + Math.min(6, l / 3 | 0), one: true, xp: 50 }
 };
 function newMission(taken) {
   const lv = level().l, ks = Object.keys(MS).filter(k => !taken.includes(k) && !(k === 'daily' && prefs.dailyDate === todayStr()));
@@ -553,11 +573,10 @@ const Snd = {
       const AC = window.AudioContext || window.webkitAudioContext; if (!AC) return;
       this.ac = new AC();
       const comp = this.ac.createDynamicsCompressor();
-      this.master = this.ac.createGain(); this.master.gain.value = prefs.snd ? 0.55 : 0;
+      this.master = this.ac.createGain(); this.master.gain.value = 0.55;
       this.master.connect(comp); comp.connect(this.ac.destination);
     } catch (e) { this.ac = null; }
   },
-  setOn(on) { if (this.master) this.master.gain.setTargetAtTime(on ? 0.55 : 0, this.ac.currentTime, 0.05); },
   tone(f, d, type = 'sine', v = 0.2, f2 = 0, delay = 0) {
     if (!this.ac || !prefs.snd) return;
     const t = this.ac.currentTime + delay, o = this.ac.createOscillator(), g = this.ac.createGain();
@@ -588,7 +607,7 @@ const Snd = {
   tick() { this.tone(1760, 0.03, 'square', 0.03); },
   start() { [0, 7, 12].forEach((s, i) => this.tone(262 * Math.pow(2, s / 12), 0.18, 'triangle', 0.12, 0, i * 0.07)); },
   droneOn() {
-    if (!this.ac || this.drone) return;
+    if (!this.ac || this.drone || !prefs.snd) return;
     const t = this.ac.currentTime, lp = this.ac.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 260;
     const g = this.ac.createGain(); g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.05, t + 1.5);
     const a = this.ac.createOscillator(), b = this.ac.createOscillator(); a.type = 'sawtooth'; b.type = 'sawtooth'; a.frequency.value = 55; b.frequency.value = 55.4;
@@ -596,7 +615,47 @@ const Snd = {
     this.drone = { a, b, lp, g };
   },
   droneSet(n) { if (!this.drone) return; const t = this.ac.currentTime; this.drone.lp.frequency.setTargetAtTime(220 + Math.min(n, 40) * 22, t, 0.5); this.drone.b.frequency.setTargetAtTime(55.4 + Math.min(n, 40) * 0.05, t, 0.5); },
-  droneOff() { if (!this.drone) return; const d = this.drone, t = this.ac.currentTime; d.g.gain.setTargetAtTime(0.0001, t, 0.25); d.a.stop(t + 1.2); d.b.stop(t + 1.2); this.drone = null; }
+  droneOff() { if (!this.drone) return; const d = this.drone, t = this.ac.currentTime; d.g.gain.setTargetAtTime(0.0001, t, 0.25); d.a.stop(t + 1.2); d.b.stop(t + 1.2); this.drone = null; },
+  // generative music: A-minor loop that speeds up and fills in as echoes pile up, and blazes in fever
+  mg: null, mt: 0, mn: 0, mb: 0, hb: null,
+  musOn() {
+    if (!this.ac || !prefs.mus || this.mt) return;
+    const t = this.ac.currentTime;
+    this.mg = this.ac.createGain(); this.mg.gain.setValueAtTime(0.0001, t); this.mg.gain.exponentialRampToValueAtTime(0.55, t + 1.2); this.mg.connect(this.master);
+    this.mb = 0; this.mn = t + 0.1; this.mt = setInterval(() => this.musTick(), 25);
+  },
+  musOff() {
+    if (!this.mt) return; clearInterval(this.mt); this.mt = 0;
+    const g = this.mg; this.mg = null; g.gain.setTargetAtTime(0.0001, this.ac.currentTime, 0.15); setTimeout(() => { try { g.disconnect(); } catch (e) {} }, 1500);
+  },
+  musTick() {
+    const ac = this.ac; if (!ac || !this.mg) return;
+    const n = G.ghosts ? G.ghosts.length : 0, hot = !!G.fever, e = 60 / (100 + Math.min(n, 30) * 1.3 + (hot ? 14 : 0)) / 2;
+    if (this.mn < ac.currentTime) this.mn = ac.currentTime + 0.02;
+    while (this.mn < ac.currentTime + 0.15) { this.musNote(this.mb, this.mn, n, hot); this.mn += e; this.mb++; }
+  },
+  musNote(b, t, n, hot) {
+    const bar = (b >> 3) & 7, s = b & 7, root = [0, 0, -4, -4, 3, 3, -2, -2][bar], pent = [0, 3, 5, 7, 10, 12, 15, 17];
+    const note = (semi, d, type, v) => {
+      const o = this.ac.createOscillator(), g = this.ac.createGain(); o.type = type; o.frequency.value = 110 * Math.pow(2, semi / 12);
+      g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(v, t + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, t + d);
+      o.connect(g); g.connect(this.mg); o.start(t); o.stop(t + d + 0.05);
+    };
+    if (s === 0 || s === 3 || s === 6) note(root - 12, 0.3, 'triangle', 0.24);
+    if (s & 1) this.hat(t, n > 6 ? 0.05 : 0.03);
+    if (s === 4 && n >= 4) this.hat(t, 0.09);
+    if (n >= 1 && (!(s & 1) || n >= 10)) note(root + pent[(b * 3 + bar) % pent.length] + 12, 0.18, 'triangle', 0.045 + Math.min(n, 20) * 0.002);
+    if (n >= 16 && s === 2) note(root + 7, 0.6, 'sine', 0.05);
+    if (hot && (s & 1)) note(root + pent[(b * 5) % pent.length] + 24, 0.1, 'square', 0.022);
+  },
+  hat(t, v) {
+    if (!this.hb) { const len = Math.ceil(this.ac.sampleRate * 0.05); this.hb = this.ac.createBuffer(1, len, this.ac.sampleRate); const ch = this.hb.getChannelData(0); for (let i = 0; i < len; i++) ch[i] = (Math.random() * 2 - 1) * (1 - i / len); }
+    const src = this.ac.createBufferSource(), f = this.ac.createBiquadFilter(), g = this.ac.createGain();
+    src.buffer = this.hb; f.type = 'highpass'; f.frequency.value = 7000; g.gain.value = v;
+    src.connect(f); f.connect(g); g.connect(this.mg); src.start(t);
+  },
+  fever() { [0, 7, 12, 19, 24].forEach((s, i) => this.tone(330 * Math.pow(2, s / 12), 0.3, 'sawtooth', 0.06, 0, i * 0.04)); this.noise(0.4, 0.2, 800, 5000, 1); },
+  half() { this.tone(660, 0.12, 'triangle', 0.14); }
 };
 /* ---------- native shell (Capacitor). In a browser all of this is inert. ---------- */
 const CAP = window.Capacitor;
@@ -710,7 +769,7 @@ function startGame(opts) {
   const seed = daily ? hashStr('YANKI-' + todayStr()) : c ? hashStr('YANKI-L-' + c.id) : ch ? ch.seed : (Math.random() * 4294967296) >>> 0;
   G = {
     mode: 'play', opts, kind, daily, cfg: c, seed, round: 1, score: 0, combo: 1, maxCombo: 1, ghosts: [], allPaths: [], rec: [], step: 0, tstep: 0,
-    px: 0, py: 0, vx: 0, vy: 0, gem: null, orb: null, fright: 0, frightEats: 0, chal: null, memPool: [], memI: 0, next: null, stars: 0,
+    px: 0, py: 0, vx: 0, vy: 0, gem: null, extra: null, orb: null, fright: 0, frightEats: 0, chal: null, memPool: [], memI: 0, next: null, stars: 0, fever: false, feverGems: 0,
     fuse: 0, fuseMax: 0, near: 0, eaten: 0, killer: null, deathT: 0, slow: 0, shake: 0, flash: 0, overT: 0, lastTick: 0
   };
   layout();
@@ -729,8 +788,9 @@ function startGame(opts) {
   fx = []; texts = []; storyCache = null;
   showScreen(null); $('hud').hidden = false; $('pauseBtn').hidden = false;
   $('hLbl').textContent = c ? L().gold : G.chal ? `${L().echoes} / ${G.chal.n}` : L().echoes;
+  $('hTime').hidden = !c; $('hTime').textContent = '';
   newRound(true);
-  Snd.start(); Snd.droneOn(); Snd.droneSet(G.ghosts.length);
+  Snd.start(); Snd.droneOn(); Snd.droneSet(G.ghosts.length); Snd.musOn();
   updateHud();
 }
 
@@ -779,6 +839,7 @@ function newRound(first) {
   const cp = G.chal && G.chal.paths[G.round - 1];
   if (cp) { const B = G.B, m = 0.06; G.gem = { x: clamp(cp[cp.length - 2], B[0] + m, B[2] - m), y: clamp(cp[cp.length - 1], B[1] + m, B[3] - m) }; }
   else G.gem = place(rng, 0.42, null);
+  G.extra = c && c.dbl ? place(rng, 0.3, G.gem) : null;
   G.orb = (G.round >= 5 && G.round % 5 === 0 && G.ghosts.length >= 3) ? place(rng, 0.25, G.gem) : null;
   if (c && c.boss && G.memPool.length) for (let k = 0; k < 3; k++) G.ghosts.push(ghost(G.memPool[G.memI++ % G.memPool.length], 0, MEMC, { mem: true, once: true, k: c.echoK }));
   const firstGames = prefs.games < 3;
@@ -907,17 +968,36 @@ function step() {
     burst(G.orb.x, G.orb.y, '#b47cff', 40, 0.7); G.orb = null; G.fright = FRIGHT; G.frightEats = 0;
     toast(L().eat, 1.2); Snd.orb(); buzz(20); G.flash = 0.25;
   }
-  if (dist2(G.gem.x, G.gem.y, G.px, G.py) < (R + GEM_R) ** 2) return collect();
+  if (G.cfg && G.cfg.flee) flee(G.gem);
+  const touching = g => dist2(g.x, g.y, G.px, G.py) < (R + GEM_R) ** 2;
+  if (G.extra && touching(G.extra)) { takeHalf(G.extra); G.extra = null; }
+  if (touching(G.gem)) {
+    if (!G.extra) return collect();
+    takeHalf(G.gem); G.gem = G.extra; G.extra = null;
+  }
 
   G.fuse -= DT;
   if (G.fuse < 1 && G.fuse > 0 && G.step - G.lastTick >= 15) { G.lastTick = G.step; Snd.tick(); }
   if (G.fuse <= 0) return die(null);
 }
 
+// runaway gold: drifts away from you, faster when you're close, and gets stuck in corners
+function flee(g) {
+  const B = G.B, m = 0.06, dx = g.x - G.px, dy = g.y - G.py, d = Math.hypot(dx, dy) || 1;
+  const v = G.cfg.flee * (d < 0.35 ? 1.6 : 1) * DT;
+  g.x = clamp(g.x + dx / d * v, B[0] + m, B[2] - m); g.y = clamp(g.y + dy / d * v, B[1] + m, B[3] - m);
+}
+function takeHalf(g) { burst(g.x, g.y, '#ffd166', 14, 0.4); addText(g.x, g.y - 0.05, L().half, '#ffd166', 13); Snd.half(); buzz(6); }
+// gold melts: 50 when the fuse is full, down to 10 as it burns
+const gemValue = () => Math.max(10, Math.round(50 * clamp(G.fuse / G.fuseMax, 0, 1)));
+
 function collect() {
   const t = G.step * DT, quick = t < QUICK && G.round > 1, c = G.cfg;
   G.combo = quick ? Math.min(G.combo + 1, 9) : 1; G.maxCombo = Math.max(G.maxCombo, G.combo);
-  const pts = 10 * G.combo; G.score += pts;
+  if (!G.fever && G.combo >= 5) { G.fever = true; toast(L().fever, 1.6); Snd.fever(); buzz(20); G.flash = 0.3; }
+  else if (G.fever && G.combo < 5) { G.fever = false; toast(L().feverOff, 1.2); }
+  if (G.fever) G.feverGems++;
+  const pts = gemValue() * G.combo * (G.fever ? 2 : 1); G.score += pts;
   const path = Float32Array.from(G.rec);
   G.allPaths.push({ path, n: path.length / 2, born: G.round, final: false });
   const cp = G.chal && G.chal.paths[G.round - 1];
@@ -947,14 +1027,14 @@ function die(killer) {
   G.mode = 'dying'; G.killer = killer; G.deathT = 0;
   G.allPaths.push({ path: Float32Array.from(G.rec), n: G.rec.length / 2, born: G.round, final: true });
   burst(G.px, G.py, YOU, 60, 0.9); if (killer) burst(G.px, G.py, killer.col, 30, 0.6);
-  G.shake = reduceMotion ? 0 : 14; G.flash = 0.6; Snd.die(); Snd.droneOff(); buzz([40, 40, 90]);
+  G.shake = reduceMotion ? 0 : 14; G.flash = 0.6; Snd.die(); Snd.droneOff(); Snd.musOff(); buzz([40, 40, 90]);
   $('pauseBtn').hidden = true;
 }
 
 function win() {
-  G.mode = 'winning'; G.deathT = 0; G.gem = null; G.orb = null; updateHud(true);
+  G.mode = 'winning'; G.deathT = 0; G.gem = null; G.extra = null; G.orb = null; G.fever = false; updateHud(true);
   const last = G.allPaths[G.allPaths.length - 1]; if (last) last.final = true;
-  burst(G.px, G.py, '#ffd166', 70, 1); G.flash = 0.35; Snd.win(); Snd.droneOff(); buzz(25);
+  burst(G.px, G.py, '#ffd166', 70, 1); G.flash = 0.35; Snd.win(); Snd.droneOff(); Snd.musOff(); buzz(25);
   toast(L().cleared, 1.6); $('pauseBtn').hidden = true;
 }
 
@@ -980,7 +1060,9 @@ function gameOver(won) {
   if (c) {
     rec = Object.assign({ s: 0, b: 0 }, prefs.lv[c.id]);
     if (won) {
-      G.stars = 1 + (G.score >= c.s2 ? 1 : 0) + (G.score >= c.s3 ? 1 : 0);
+      const secs = G.tstep * DT;
+      G.stars = 1 + (G.score >= c.s2 ? 1 : 0) + (secs <= c.t3 ? 1 : 0);
+      rec.t = Math.min(rec.t || Infinity, Math.round(secs * 10) / 10);
       if (!rec.s) ST.cleared++;
       newStars = Math.max(0, G.stars - rec.s); rec.s = Math.max(rec.s, G.stars);
       if (!c.boss) remember(c);
@@ -990,7 +1072,7 @@ function gameOver(won) {
   const before = level();
   const done = advanceMissions({
     near1: G.near, round1: c ? 0 : n, combo1: G.maxCombo, eatT: G.eaten, gemsT: n, daily: G.daily ? 1 : 0,
-    starsT: newStars, gamesT: 1, nearT: G.near
+    starsT: newStars, gamesT: 1, nearT: G.near, fever1: G.feverGems
   });
   const xp = n + G.near + 2 * G.eaten + (won ? 15 : 0) + newStars * 10 + done.reduce((s, m) => s + m.xp, 0);
   prefs.xp += xp;
@@ -1007,7 +1089,8 @@ function gameOver(won) {
   $('oAllYou').hidden = won || !!(k && (k.pre || k.ch));
   $('oKiller').hidden = won; $('oKiller').textContent = won ? '' : killerText(k);
   $('oRound').textContent = c ? `${n}/${c.goal}` : n; $('oUnit').textContent = c ? L().gold : L().echoes;
-  $('oScore').textContent = G.score; $('oBest').textContent = c ? rec.b : prefs.best;
+  $('oScore').textContent = G.score; $('oBest').textContent = c ? L().sec((G.tstep * DT).toFixed(1)) : prefs.best;
+  $('oBestL').textContent = c ? L().timeS : L().best;
   $('oNear').textContent = G.near; $('oEaten').textContent = G.eaten;
   $('oNew').hidden = !(isBest && n > 2); $('oNew').textContent = L().newBest;
   const bar = (x, m) => `<span class="bar"><i style="width:${Math.round(x / m * 100)}%"></i></span>`;
@@ -1028,8 +1111,8 @@ function gameOver(won) {
   if (BOT && /art/.test(location.search)) setTimeout(openArt, 500);
 }
 
-function pause() { if (G.mode !== 'play') return; G.mode = 'paused'; showScreen('pause'); Snd.droneOff(); }
-function resume() { if (G.mode !== 'paused') return; G.mode = 'play'; showScreen(null); Snd.init(); Snd.droneOn(); Snd.droneSet(G.ghosts.length); last = performance.now(); acc = 0; }
+function pause() { if (G.mode !== 'play') return; G.mode = 'paused'; showScreen('pause'); Snd.droneOff(); Snd.musOff(); }
+function resume() { if (G.mode !== 'paused') return; G.mode = 'play'; showScreen(null); Snd.init(); Snd.droneOn(); Snd.droneSet(G.ghosts.length); Snd.musOn(); last = performance.now(); acc = 0; }
 
 /* ---------- fx ---------- */
 function burst(x, y, col, n, sp) {
@@ -1063,8 +1146,9 @@ function draw(dt) {
   }
   const idx = G.step;
   for (const g of G.ghosts) if (!g.dead && (g.loop || gIdx(g, idx) < g.n)) drawGhost(g, idx);
+  if (G.fever) { const B = G.B; ctx.fillStyle = `rgba(255,120,40,${0.05 + 0.03 * Math.sin(frame * 0.15)})`; ctx.fillRect(X(B[0]), Y(B[1]), (B[2] - B[0]) * U, (B[3] - B[1]) * U); }
   if (G.cfg && G.cfg.dark) drawDark();
-  if (G.gem) drawGem(); if (G.orb) drawOrb();
+  if (G.gem) drawGem(G.gem); if (G.extra) drawGem(G.extra); if (G.orb) drawOrb();
   drawPlayer();
   drawFx();
   if (G.mode === 'dying' && G.killer) {
@@ -1145,11 +1229,12 @@ function drawPlayer() {
     const s0 = Math.max(0, n - 12); ctx.beginPath(); ctx.moveTo(X(r[2 * s0]), Y(r[2 * s0 + 1]));
     for (let j = s0 + 1; j < n; j++) ctx.lineTo(X(r[2 * j]), Y(r[2 * j + 1])); ctx.stroke(); ctx.globalAlpha = 1;
   }
+  if (G.fever) { ctx.globalCompositeOperation = 'lighter'; const gs = R * U * (10 + Math.sin(frame * 0.3)); ctx.drawImage(glow('#ff8a3d'), X(G.px) - gs / 2, Y(G.py) - gs / 2, gs, gs); ctx.globalCompositeOperation = 'source-over'; }
   drawBody(G.px, G.py, YOU, G.vx, G.vy, 1, '#ffffff');
 }
 
-function drawGem() {
-  const g = G.gem, x = X(g.x), y = Y(g.y), r = GEM_R * U, t = frame / 60;
+function drawGem(g) {
+  const x = X(g.x), y = Y(g.y), r = GEM_R * U, t = frame / 60;
   const f = clamp(G.fuse / G.fuseMax, 0, 1);
   const ringCol = f < 0.3 ? (frame >> 2 & 1 ? '#ff3d6e' : '#ffd166') : '#ffd166';
   ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.9;
@@ -1162,6 +1247,11 @@ function drawGem() {
   ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * 0.8, 0); ctx.lineTo(0, r); ctx.lineTo(-r * 0.8, 0); ctx.closePath(); ctx.fill();
   ctx.fillStyle = '#fff4cf'; ctx.beginPath(); ctx.moveTo(0, -r * 0.45); ctx.lineTo(r * 0.35, 0); ctx.lineTo(0, r * 0.45); ctx.lineTo(-r * 0.35, 0); ctx.closePath(); ctx.fill();
   ctx.restore();
+  // what it's worth right now; it melts with the fuse
+  if (G.mode === 'play' && g === G.gem) {
+    ctx.font = `700 12px ${cssVar('--f-num')}`; ctx.textAlign = 'center'; ctx.globalAlpha = 0.9;
+    ctx.fillStyle = G.fever ? '#ff9a3d' : '#ffd166'; ctx.fillText(gemValue() * (G.fever ? 2 : 1), x, y - r * 2.1 - 7); ctx.globalAlpha = 1;
+  }
 }
 
 function drawOrb() {
@@ -1351,7 +1441,7 @@ function openLevel(w, i) {
   $('lName').textContent = WORLDS[w][lang][0];
   $('lTwist').textContent = c.boss ? L().bossText : WORLDS[w][lang][1];
   $('lGoal').innerHTML = L().goal(c.goal);
-  $('lStars').innerHTML = [['★', L().sFinish], ['★★', L().sScore(c.s2)], ['★★★', L().sScore(c.s3)]]
+  $('lStars').innerHTML = [['★', L().sFinish], ['★★', L().sScore(c.s2)], ['★★★', L().sTime(c.t3)]]
     .map(([st, t], k) => `<span${(rec.s || 0) > k ? ' class="got"' : ''}><b>${st}</b>${t}</span>`).join('');
   showScreen('lvl');
   setTimeout(() => $('lPlay').focus({ preventScroll: true }), 30);
@@ -1401,7 +1491,7 @@ function toast(s, d) {
 let lastCombo = 1;
 function updateHud(pop) {
   $('hScore').textContent = G.score; $('hRound').textContent = G.cfg ? `${G.round - 1}/${G.cfg.goal}` : G.round - 1;
-  const c = $('hCombo'); c.textContent = '×' + G.combo; c.classList.toggle('on', G.combo > 1);
+  const c = $('hCombo'); c.textContent = '×' + G.combo + (G.fever ? ' 🔥' : ''); c.classList.toggle('on', G.combo > 1); c.classList.toggle('fever', !!G.fever);
   if (pop && G.combo > lastCombo) { c.classList.add('pop'); setTimeout(() => c.classList.remove('pop'), 140); }
   lastCombo = G.combo;
 }
@@ -1417,12 +1507,13 @@ function applyLang() {
   document.querySelectorAll('[data-i]').forEach(el => { const v = L()[el.dataset.i]; if (typeof v === 'string') el.textContent = v; });
   $('mTag').innerHTML = L().tag;
   if (NATIVE || matchMedia('(pointer: coarse)').matches) document.querySelector('#menu [data-i="controls"]').textContent = L().controlsTouch;
-  $('sndBtn').textContent = prefs.snd ? L().sndOn : L().sndOff;
-  $('langBtn').textContent = L().lang;
+  $('sndBtn').textContent = prefs.snd ? L().sndOn : L().sndOff; $('sndBtn').classList.toggle('off', !prefs.snd);
+  $('musBtn').textContent = prefs.mus ? L().musOn : L().musOff; $('musBtn').classList.toggle('off', !prefs.mus);
+  $('langSeg').querySelectorAll('button').forEach(b => { const on = b.dataset.l === lang; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
   if (NATIVE) { $('dlBtn').textContent = L().shareImg; $('copyBtn').textContent = L().shareScore; document.querySelector('#art [data-i="saveHint"]').hidden = true; }
   refreshMenu();
 }
-function toMenu() { G = { mode: 'menu' }; fx = []; texts = []; Snd.droneOff(); $('hud').hidden = true; $('pauseBtn').hidden = true; refreshMenu(); showScreen('menu'); }
+function toMenu() { G = { mode: 'menu' }; fx = []; texts = []; Snd.droneOff(); Snd.musOff(); $('hud').hidden = true; $('pauseBtn').hidden = true; refreshMenu(); showScreen('menu'); }
 function toLevels() { const w = G.cfg ? G.cfg.w : undefined; toMenu(); openLevels(w); }
 
 $('playBtn').onclick = () => startGame({});
@@ -1445,8 +1536,9 @@ $('lBack').onclick = () => openLevels();
 $('pBack').onclick = () => { refreshMenu(); showScreen('menu'); };
 $('cPlay').onclick = () => { if (incoming) startGame({ chal: incoming }); };
 $('cBack').onclick = () => showScreen('menu');
-$('sndBtn').onclick = () => { prefs.snd = !prefs.snd; save(); Snd.init(); Snd.setOn(prefs.snd); applyLang(); };
-$('langBtn').onclick = () => { lang = lang === 'tr' ? 'en' : 'tr'; prefs.lang = lang; save(); applyLang(); };
+$('sndBtn').onclick = () => { prefs.snd = !prefs.snd; save(); Snd.init(); if (!prefs.snd) Snd.droneOff(); else Snd.tone(660, 0.12, 'triangle', 0.14); applyLang(); };
+$('musBtn').onclick = () => { prefs.mus = !prefs.mus; save(); Snd.init(); if (!prefs.mus) Snd.musOff(); applyLang(); };
+$('langSeg').querySelectorAll('button').forEach(b => { b.onclick = () => { lang = b.dataset.l; prefs.lang = lang; save(); applyLang(); }; });
 // overlay buttons swallow pointer events so they never steer the player
 document.querySelectorAll('.screen').forEach(s => s.addEventListener('pointerdown', e => e.stopPropagation()));
 
@@ -1465,6 +1557,7 @@ function loop(now) {
     G.deathT += dt; sdt = dt * 0.5;
     if (G.deathT > 1.25) gameOver(G.mode === 'winning');
   }
+  if (G.cfg && G.mode === 'play' && !(frame % 6)) $('hTime').textContent = L().sec((G.tstep * DT).toFixed(1));
   updateFx(sdt);
   draw(dt);
   raf(loop);

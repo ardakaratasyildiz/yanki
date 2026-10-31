@@ -83,6 +83,13 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 .chip{font-size:13px;padding:9px 16px;border-radius:999px;border:1px solid rgba(138,143,179,.35);background:rgba(10,10,22,.5);color:var(--ink);cursor:pointer}
 .chip:hover{border-color:var(--ink)}
 .tog.off{color:var(--dim);border-style:dashed}
+.langsel{display:inline-flex;align-items:center;gap:4px;position:relative}
+.langsel select{appearance:none;-webkit-appearance:none;background:transparent;border:0;color:var(--ink);font:600 13px var(--f-ui);padding:0 2px;cursor:pointer}
+.langsel select option{background:#10101c;color:var(--ink)}
+.alt3{font-weight:700;font-size:13px;letter-spacing:.14em;padding:11px 24px;border-radius:999px;border:1px solid rgba(180,124,255,.65);color:var(--void);background:rgba(10,10,22,.5);cursor:pointer;display:inline-flex;gap:10px;align-items:baseline}
+.alt3 small{font-family:var(--f-num);color:var(--dim);font-size:12px;letter-spacing:.02em}
+#menu{gap:12px}
+#oStrip{margin:0;font-size:18px;line-height:1.35;letter-spacing:2px;max-width:12em;word-break:break-all}
 .seg{display:inline-flex;border:1px solid rgba(138,143,179,.35);border-radius:999px;overflow:hidden;background:rgba(10,10,22,.5)}
 .seg button{font:700 13px var(--f-num);letter-spacing:.08em;padding:9px 14px;background:transparent;color:var(--dim);border:0;cursor:pointer}
 .seg button.on{background:var(--you);color:var(--bg)}
@@ -221,13 +228,14 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
   <p class="tag" id="mTag"></p>
   <button id="playBtn" class="big" data-i="play">OYNA</button>
   <button id="levelsBtn" class="alt2"><span data-i="levels">BÖLÜMLER</span><small id="mStars"></small></button>
+  <button id="eventBtn" class="alt3"><span data-i="event"></span><small id="mEvent"></small></button>
   <button id="dailyBtn" class="alt"><span data-i="daily">Günün Yankısı</span><small id="dailyBest"></small></button>
   <div class="meta"><span data-i="best">En iyi</span><b id="mBest">0</b></div>
   <button id="profBtn"><span data-i="lvlWord">Seviye</span><b id="mLvl">1</b><span class="bar"><i id="mBar"></i></span><em data-i="profile"></em></button>
   <div class="row">
     <button id="sndBtn" class="chip tog"></button>
     <button id="musBtn" class="chip tog"></button>
-    <div class="seg" id="langSeg" role="group" aria-label="Dil / Language"><button data-l="tr">TR</button><button data-l="en">EN</button></div>
+    <label class="chip langsel">🌐 <select id="langSel" aria-label="Dil / Language"><option value="tr">Türkçe</option><option value="en">English</option><option value="es">Español</option><option value="pt">Português</option><option value="de">Deutsch</option><option value="ja">日本語</option></select> ▾</label>
   </div>
   <p class="hint" data-i="controls"></p>
 </section>
@@ -238,6 +246,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
   <p class="allyou" id="oAllYou" data-i="allYou"></p>
   <p class="killer" id="oKiller"></p>
   <div class="bigstat"><b id="oRound">0</b><span id="oUnit">yankı</span></div>
+  <p id="oStrip" hidden></p>
   <p id="oNew" hidden></p>
   <div class="stats">
     <div><b id="oScore">0</b><span data-i="score"></span></div>
@@ -366,13 +375,13 @@ const T = {
     share: (n, s, d) => `YANKI${d ? ' · Günün Yankısı ' + d : ''}\n${n} kez kendimden kaçtım. Skor ${s}.\nGeçmişine dokunma.`,
     artLine: 'Bu çizgilerin hepsi sendin.', artStats: (n, s) => `${n} yankı · ${s} skor`, today: 'bugün',
     levels: 'BÖLÜMLER', lvlWord: 'Seviye', profile: 'görevler ›', next: 'SONRAKİ', map: 'Harita', back: 'Geri',
-    lvlTag: (w, i) => `BÖLÜM ${w}-${i}`, boss: 'HESAPLAŞMA',
+    lvlTag: lab => `BÖLÜM ${lab}`, boss: 'HESAPLAŞMA',
     bossText: 'Bu dünyada çizdiğin yollar geri dönüyor. Her turda birkaçı daha.',
     goal: n => `<b>${n}</b> altın topla`, goalToast: n => `${n} altın topla.`,
     sFinish: 'bitir', sScore: n => `${n} skor`, cleared: 'BÖLÜM TAMAM',
     worldLock: (w, need) => `${w}. dünyanın hesaplaşmasını geç ve toplam ${need} ★ topla.`,
-    shareLvl: (w, i, s) => `YANKI · Bölüm ${w}-${i} ${'★'.repeat(s)}\nGeçmişine dokunma.`,
-    artLvl: (w, i, s) => `Bölüm ${w}-${i} · ${'★'.repeat(s)}`,
+    shareLvl: (lab, s) => `YANKI · Bölüm ${lab} ${'★'.repeat(s)}\nGeçmişine dokunma.`,
+    artLvl: (lab, s) => `Bölüm ${lab} · ${'★'.repeat(s)}`,
     xpGain: n => `+${n} XP`, lvlUp: n => `SEVİYE ${n}!`, unlocked: s => `Yeni: ${s}`,
     tMissions: 'Görevler', tGallery: 'Galeri', tStats: 'İstatistik', tLooks: 'Görünüm',
     msNote: 'Görevler her oyunun sonunda ilerler. Biten görevin yerine yenisi gelir.',
@@ -394,7 +403,12 @@ const T = {
     chalShare: (n, url) => `YANKI\n${n} kez kendimden kaçtım. Benim geçmişimle oynayıp beni geçebilir misin?\n${url}`,
     linkCopied: 'Bağlantı kopyalandı',
     fever: 'ALEV! Puanlar ×2', feverOff: 'Alev söndü', sTime: n => `${n} sn altı`, timeS: 'süre', sec: n => `${n} sn`,
-    half: '1/2', bestTime: 'en iyi süre'
+    half: '1/2', bestTime: 'en iyi süre', roundLbl: k => `${k}. tur`,
+    dailyShare: (d, n, st, kl, url) => `YANKI · Günün Yankısı ${d} · ${n}\n${st}\n${kl}\n${url}`,
+    killShort: k => `Beni ${k}. turdaki ben yakaladı.`, killShortTime: 'Altın beni bekledi.', killShortOther: 'Geçmiş bana yetişti.',
+    streakT: 'SERİ', streakCard: n => `🔥 ${n} günlük seri`, streakNext: (d, r) => `Sıradaki: ${d}. gün → ${r}`, streakGot: (d, r) => `🔥 ${d}. gün ödülü: ${r}`,
+    streakNone: 'Günün Yankısı’nı her gün oyna; seri büyüdükçe ödüller de büyür.', streakLock: n => `🔥 ${n} gün`,
+    event: 'HAFTANIN ETKİNLİĞİ', evName: 'Haftanın Etkinliği', evLeft: n => `${n} gün kaldı`, evTag: i => `ETKİNLİK ${i}/5`, evDone: 'ETKİNLİK TAMAM! +150 XP', sEvents: 'etkinlik'
   },
   en: {
     tag: 'Grab the <em>gold</em>. Don’t touch your <i>past</i>.',
@@ -414,13 +428,13 @@ const T = {
     share: (n, s, d) => `YANKI${d ? ' · Daily Echo ' + d : ''}\nI outran myself ${n} time${n === 1 ? '' : 's'}. Score ${s}.\nDon’t touch your past.`,
     artLine: 'Every one of these lines was you.', artStats: (n, s) => `${n} echo${n === 1 ? '' : 'es'} · ${s} score`, today: 'today',
     levels: 'LEVELS', lvlWord: 'Level', profile: 'missions ›', next: 'NEXT', map: 'Map', back: 'Back',
-    lvlTag: (w, i) => `LEVEL ${w}-${i}`, boss: 'RECKONING',
+    lvlTag: lab => `LEVEL ${lab}`, boss: 'RECKONING',
     bossText: 'The paths you drew in this world come back. A few more every round.',
     goal: n => `Grab <b>${n}</b> gold`, goalToast: n => `Grab ${n} gold.`,
     sFinish: 'finish', sScore: n => `${n} score`, cleared: 'LEVEL CLEAR',
     worldLock: (w, need) => `Beat the reckoning of world ${w} and collect ${need} ★ in total.`,
-    shareLvl: (w, i, s) => `YANKI · Level ${w}-${i} ${'★'.repeat(s)}\nDon’t touch your past.`,
-    artLvl: (w, i, s) => `Level ${w}-${i} · ${'★'.repeat(s)}`,
+    shareLvl: (lab, s) => `YANKI · Level ${lab} ${'★'.repeat(s)}\nDon’t touch your past.`,
+    artLvl: (lab, s) => `Level ${lab} · ${'★'.repeat(s)}`,
     xpGain: n => `+${n} XP`, lvlUp: n => `LEVEL ${n}!`, unlocked: s => `New: ${s}`,
     tMissions: 'Missions', tGallery: 'Gallery', tStats: 'Stats', tLooks: 'Looks',
     msNote: 'Missions advance at the end of every game. A finished mission is replaced by a new one.',
@@ -442,11 +456,232 @@ const T = {
     chalShare: (n, url) => `YANKI\nI outran myself ${n} times. Can you beat me playing against my past?\n${url}`,
     linkCopied: 'Link copied',
     fever: 'BLAZE! Points ×2', feverOff: 'The blaze went out', sTime: n => `under ${n}s`, timeS: 'time', sec: n => `${n}s`,
-    half: '1/2', bestTime: 'best time'
+    half: '1/2', bestTime: 'best time', roundLbl: k => `round ${k}`,
+    dailyShare: (d, n, st, kl, url) => `YANKI · Daily Echo ${d} · ${n}\n${st}\n${kl}\n${url}`,
+    killShort: k => `Caught by me from round ${k}.`, killShortTime: 'The gold waited for me.', killShortOther: 'The past caught up.',
+    streakT: 'STREAK', streakCard: n => `🔥 ${n}-day streak`, streakNext: (d, r) => `Next: day ${d} → ${r}`, streakGot: (d, r) => `🔥 Day ${d} reward: ${r}`,
+    streakNone: 'Play the Daily Echo every day; the longer the streak, the bigger the rewards.', streakLock: n => `🔥 ${n} days`,
+    event: 'WEEKLY EVENT', evName: 'Weekly Event', evLeft: n => `${n} day${n === 1 ? '' : 's'} left`, evTag: i => `EVENT ${i}/5`, evDone: 'EVENT COMPLETE! +150 XP', sEvents: 'events'
   }
 };
-let lang = prefs.lang || ((navigator.language || '').toLowerCase().startsWith('tr') ? 'tr' : 'en');
+T.es = {
+  tag: 'Coge el <em>oro</em>. No toques tu <i>pasado</i>.',
+  play: 'JUGAR', daily: 'Eco del Día', best: 'Mejor', echoes: 'ecos', score: 'puntos', gold: 'oro',
+  controls: 'ratón · dedo · flechas', controlsTouch: 'arrastra el dedo en cualquier parte de la pantalla', sndOn: 'Sonido: Sí', sndOff: 'Sonido: No', musOn: '♪ Música: Sí', musOff: '♪ Música: No',
+  t1: 'Coge el oro.', t2: 'Esa cosa roja… eres tú. Tú, hace una ronda.', t3: 'Cada movimiento que haces vuelve.',
+  t4: 'Orbe morado: ¡cómete tu pasado!', eat: '¡CÓMETELOS!', near: 'POR UN PELO', quick: 'RÁPIDO',
+  killedBy: k => `Te atrapaste a ti mismo de la ronda ${k}.`, killedPrev: 'Tu yo anterior te atrapó.',
+  killedOther: 'Te atrapó el eco de otra persona.', killedMem: 'Te atrapó tu yo de un nivel anterior.',
+  killedChal: (nm, k) => `${nm} te atrapó con su ronda ${k}.`, memLbl: 'tu viejo yo',
+  timeout: 'Se acabó el tiempo. El oro te esperaba.', allYou: 'todos eran tú',
+  newBest: 'NUEVO RÉCORD', again: 'OTRA VEZ', story: 'Ver tu historia', copy: 'Copiar puntos', menu: 'Menú',
+  copied: 'Copiado', copyFail: 'No se pudo copiar, selecciona el texto:', paused: 'EN PAUSA', resume: 'SEGUIR',
+  nearS: 'por un pelo', eatenS: 'pasado comido', saveHint: 'Mantén pulsado o clic derecho → guardar imagen',
+  download: 'Descargar', shareImg: 'Compartir', shareScore: 'Compartir puntos', close: 'Cerrar', dailyTag: 'ECO DEL DÍA',
+  m10: '10 ecos. Se llena de gente.', m20: '20 ecos. Luchas contra tu propio ejército.', m30: '30. Tu pasado te conoce.', m50: '50. Eres una leyenda.',
+  share: (n, s, d) => `YANKI${d ? ' · Eco del Día ' + d : ''}\nMe escapé de mí mismo ${n} veces. ${s} puntos.\nNo toques tu pasado.`,
+  artLine: 'Todas estas líneas eras tú.', artStats: (n, s) => `${n} ecos · ${s} puntos`, today: 'hoy',
+  levels: 'NIVELES', lvlWord: 'Nivel', profile: 'misiones ›', next: 'SIGUIENTE', map: 'Mapa', back: 'Atrás',
+  lvlTag: lab => `NIVEL ${lab}`, boss: 'AJUSTE DE CUENTAS',
+  bossText: 'Vuelven los caminos que trazaste en este mundo. Unos cuantos más cada ronda.',
+  goal: n => `Coge <b>${n}</b> de oro`, goalToast: n => `Coge ${n} de oro.`,
+  sFinish: 'termina', sScore: n => `${n} puntos`, cleared: 'NIVEL SUPERADO',
+  worldLock: (w, need) => `Supera el ajuste de cuentas del mundo ${w} y reúne ${need} ★ en total.`,
+  shareLvl: (lab, s) => `YANKI · Nivel ${lab} ${'★'.repeat(s)}\nNo toques tu pasado.`,
+  artLvl: (lab, s) => `Nivel ${lab} · ${'★'.repeat(s)}`,
+  xpGain: n => `+${n} XP`, lvlUp: n => `¡NIVEL ${n}!`, unlocked: s => `Nuevo: ${s}`,
+  tMissions: 'Misiones', tGallery: 'Galería', tStats: 'Estadísticas', tLooks: 'Estilo',
+  msNote: 'Las misiones avanzan al final de cada partida. Una misión cumplida se sustituye por otra.',
+  ms: {
+    near1: n => `Haz ${n} esquivas por un pelo en una partida`, round1: n => `Llega a ${n} ecos en una partida`, combo1: n => `Llega a un combo ×${n}`,
+    eatT: n => `Cómete ${n} ecos con el orbe morado`, gemsT: n => `Reúne ${n} de oro en total`, daily: () => 'Juega el Eco del Día',
+    starsT: n => `Gana ${n} ★ nuevas en niveles`, gamesT: n => `Juega ${n} partidas`, nearT: n => `Haz ${n} esquivas por un pelo en total`, fever1: n => `Coge ${n} de oro en llamas en una partida`
+  },
+  sGames: 'partidas', sGems: 'oro', sNear: 'por un pelo', sEaten: 'pasado comido', sBest: 'mejores ecos', sBestScore: 'mejor puntuación',
+  sCombo: 'mejor combo', sStars: 'estrellas', sStreak: 'racha más larga', sCleared: 'niveles superados', sEvents: 'eventos',
+  insight: (k, c) => `Tu yo de la ronda ${k} es quien más te ha atrapado (${c} ${c === 1 ? 'vez' : 'veces'}).`, insightNone: 'Ninguno de tus yoes pasados te ha atrapado aún.',
+  galEmpty: 'Aquí se reunirá la pintura de luz de cada partida que termines.', galShare: 'YANKI\nNo toques tu pasado.',
+  skinsT: 'TU COLOR', palsT: 'PALETA DE LA PINTURA DE LUZ', lockAt: n => `Nv ${n}`, nameT: 'TU NOMBRE (se ve en los retos)', namePh: 'Opcional',
+  challenge: 'Retar', accept: 'ACEPTAR', chalTag: 'RETO', chalAnon: 'Un amigo',
+  chalWho: nm => `<b>${nm}</b> te reta`,
+  chalText: n => `Llegó a ${n} ecos. Ahora juega con su pasado: cada ronda esquivarás sus caminos.`,
+  chalStart: (nm, n) => `${nm}: ${n} ecos. Supéralo.`, chalBeat: nm => `¡Has superado a ${nm}! Desde aquí, tu propio pasado.`,
+  chalWin: (nm, a, b) => `${nm} ${a} · TÚ ${b} · GANAS`, chalLose: (nm, a, b) => `${nm} ${a} · TÚ ${b}`,
+  chalShare: (n, url) => `YANKI\nMe escapé de mí mismo ${n} veces. ¿Puedes superarme jugando contra mi pasado?\n${url}`,
+  linkCopied: 'Enlace copiado',
+  fever: '¡EN LLAMAS! Puntos ×2', feverOff: 'Se apagaron las llamas', sTime: n => `menos de ${n} s`, timeS: 'tiempo', sec: n => `${n} s`,
+  bestTime: 'mejor tiempo', roundLbl: k => `ronda ${k}`,
+  dailyShare: (d, n, st, kl, url) => `YANKI · Eco del Día ${d} · ${n}\n${st}\n${kl}\n${url}`,
+  killShort: k => `Me atrapé yo mismo de la ronda ${k}.`, killShortTime: 'El oro me esperó.', killShortOther: 'El pasado me alcanzó.',
+  streakT: 'RACHA', streakCard: n => `🔥 Racha de ${n} días`, streakNext: (d, r) => `Siguiente: día ${d} → ${r}`, streakGot: (d, r) => `🔥 Premio del día ${d}: ${r}`,
+  streakNone: 'Juega el Eco del Día cada día; cuanto más larga la racha, mayores los premios.', streakLock: n => `🔥 ${n} días`,
+  event: 'EVENTO SEMANAL', evName: 'Evento Semanal', evLeft: n => `quedan ${n} ${n === 1 ? 'día' : 'días'}`, evTag: i => `EVENTO ${i}/5`, evDone: '¡EVENTO COMPLETADO! +150 XP'
+};
+T.pt = {
+  tag: 'Pegue o <em>ouro</em>. Não toque no seu <i>passado</i>.',
+  play: 'JOGAR', daily: 'Eco do Dia', best: 'Recorde', echoes: 'ecos', score: 'pontos', gold: 'ouro',
+  controls: 'mouse · dedo · setas', controlsTouch: 'arraste o dedo em qualquer lugar da tela', sndOn: 'Som: Ligado', sndOff: 'Som: Desligado', musOn: '♪ Música: Ligada', musOff: '♪ Música: Desligada',
+  t1: 'Pegue o ouro.', t2: 'Aquela coisa vermelha… é você. Você, uma rodada atrás.', t3: 'Cada movimento seu volta.',
+  t4: 'Orbe roxo: devore o seu passado!', eat: 'DEVORE-OS!', near: 'POR UM TRIZ', quick: 'RÁPIDO',
+  killedBy: k => `Você foi pego por você mesmo da rodada ${k}.`, killedPrev: 'Seu eu anterior pegou você.',
+  killedOther: 'O eco de outra pessoa pegou você.', killedMem: 'Seu eu de uma fase anterior pegou você.',
+  killedChal: (nm, k) => `${nm} pegou você com a rodada ${k}.`, memLbl: 'velho você',
+  timeout: 'O tempo acabou. O ouro esperou por você.', allYou: 'todos eram você',
+  newBest: 'NOVO RECORDE', again: 'DE NOVO', story: 'Ver sua história', copy: 'Copiar pontos', menu: 'Menu',
+  copied: 'Copiado', copyFail: 'Não foi possível copiar, selecione o texto:', paused: 'PAUSADO', resume: 'CONTINUAR',
+  nearS: 'por um triz', eatenS: 'passado devorado', saveHint: 'Toque e segure ou clique com o botão direito → salvar imagem',
+  download: 'Baixar', shareImg: 'Compartilhar', shareScore: 'Compartilhar pontos', close: 'Fechar', dailyTag: 'ECO DO DIA',
+  m10: '10 ecos. Está lotando.', m20: '20 ecos. Você luta contra seu próprio exército.', m30: '30. Seu passado conhece você.', m50: '50. Você é uma lenda.',
+  share: (n, s, d) => `YANKI${d ? ' · Eco do Dia ' + d : ''}\nFugi de mim mesmo ${n} vezes. ${s} pontos.\nNão toque no seu passado.`,
+  artLine: 'Todas essas linhas eram você.', artStats: (n, s) => `${n} ecos · ${s} pontos`, today: 'hoje',
+  levels: 'FASES', lvlWord: 'Nível', profile: 'missões ›', next: 'PRÓXIMA', map: 'Mapa', back: 'Voltar',
+  lvlTag: lab => `FASE ${lab}`, boss: 'ACERTO DE CONTAS',
+  bossText: 'Os caminhos que você traçou neste mundo voltam. Mais alguns a cada rodada.',
+  goal: n => `Pegue <b>${n}</b> de ouro`, goalToast: n => `Pegue ${n} de ouro.`,
+  sFinish: 'termine', sScore: n => `${n} pontos`, cleared: 'FASE CONCLUÍDA',
+  worldLock: (w, need) => `Vença o acerto de contas do mundo ${w} e junte ${need} ★ no total.`,
+  shareLvl: (lab, s) => `YANKI · Fase ${lab} ${'★'.repeat(s)}\nNão toque no seu passado.`,
+  artLvl: (lab, s) => `Fase ${lab} · ${'★'.repeat(s)}`,
+  xpGain: n => `+${n} XP`, lvlUp: n => `NÍVEL ${n}!`, unlocked: s => `Novo: ${s}`,
+  tMissions: 'Missões', tGallery: 'Galeria', tStats: 'Estatísticas', tLooks: 'Visual',
+  msNote: 'As missões avançam no fim de cada partida. Uma missão concluída é trocada por outra.',
+  ms: {
+    near1: n => `Escape por um triz ${n} vezes numa partida`, round1: n => `Chegue a ${n} ecos numa partida`, combo1: n => `Chegue a um combo ×${n}`,
+    eatT: n => `Devore ${n} ecos com o orbe roxo`, gemsT: n => `Junte ${n} de ouro no total`, daily: () => 'Jogue o Eco do Dia',
+    starsT: n => `Ganhe ${n} ★ novas nas fases`, gamesT: n => `Jogue ${n} partidas`, nearT: n => `Escape por um triz ${n} vezes no total`, fever1: n => `Pegue ${n} de ouro em chamas numa partida`
+  },
+  sGames: 'partidas', sGems: 'ouro', sNear: 'por um triz', sEaten: 'passado devorado', sBest: 'melhor em ecos', sBestScore: 'melhor pontuação',
+  sCombo: 'melhor combo', sStars: 'estrelas', sStreak: 'maior sequência', sCleared: 'fases concluídas', sEvents: 'eventos',
+  insight: (k, c) => `Quem mais pegou você foi o seu eu da rodada ${k} (${c} ${c === 1 ? 'vez' : 'vezes'}).`, insightNone: 'Nenhum dos seus eus passados pegou você ainda.',
+  galEmpty: 'A pintura de luz de cada partida que você terminar vai se juntar aqui.', galShare: 'YANKI\nNão toque no seu passado.',
+  skinsT: 'SUA COR', palsT: 'PALETA DA PINTURA DE LUZ', lockAt: n => `Nv ${n}`, nameT: 'SEU NOME (aparece nos desafios)', namePh: 'Opcional',
+  challenge: 'Desafiar', accept: 'ACEITAR', chalTag: 'DESAFIO', chalAnon: 'Um amigo',
+  chalWho: nm => `<b>${nm}</b> desafia você`,
+  chalText: n => `Chegou a ${n} ecos. Agora jogue com o passado dessa pessoa: a cada rodada você desvia dos caminhos dela.`,
+  chalStart: (nm, n) => `${nm}: ${n} ecos. Supere.`, chalBeat: nm => `Você passou ${nm}! Daqui em diante, o seu próprio passado.`,
+  chalWin: (nm, a, b) => `${nm} ${a} · VOCÊ ${b} · VOCÊ VENCEU`, chalLose: (nm, a, b) => `${nm} ${a} · VOCÊ ${b}`,
+  chalShare: (n, url) => `YANKI\nFugi de mim mesmo ${n} vezes. Consegue me vencer jogando contra o meu passado?\n${url}`,
+  linkCopied: 'Link copiado',
+  fever: 'EM CHAMAS! Pontos ×2', feverOff: 'As chamas apagaram', sTime: n => `menos de ${n} s`, timeS: 'tempo', sec: n => `${n} s`,
+  bestTime: 'melhor tempo', roundLbl: k => `rodada ${k}`,
+  dailyShare: (d, n, st, kl, url) => `YANKI · Eco do Dia ${d} · ${n}\n${st}\n${kl}\n${url}`,
+  killShort: k => `Fui pego por mim mesmo da rodada ${k}.`, killShortTime: 'O ouro esperou por mim.', killShortOther: 'O passado me alcançou.',
+  streakT: 'SEQUÊNCIA', streakCard: n => `🔥 Sequência de ${n} dias`, streakNext: (d, r) => `Próximo: dia ${d} → ${r}`, streakGot: (d, r) => `🔥 Prêmio do dia ${d}: ${r}`,
+  streakNone: 'Jogue o Eco do Dia todo dia; quanto maior a sequência, maiores os prêmios.', streakLock: n => `🔥 ${n} dias`,
+  event: 'EVENTO DA SEMANA', evName: 'Evento da Semana', evLeft: n => `${n === 1 ? 'resta 1 dia' : `restam ${n} dias`}`, evTag: i => `EVENTO ${i}/5`, evDone: 'EVENTO CONCLUÍDO! +150 XP'
+};
+T.de = {
+  tag: 'Schnapp dir das <em>Gold</em>. Berühr nicht deine <i>Vergangenheit</i>.',
+  play: 'SPIELEN', daily: 'Echo des Tages', best: 'Bestwert', echoes: 'Echos', score: 'Punkte', gold: 'Gold',
+  controls: 'Maus · Finger · Pfeiltasten', controlsTouch: 'zieh deinen Finger irgendwo über den Bildschirm', sndOn: 'Ton: An', sndOff: 'Ton: Aus', musOn: '♪ Musik: An', musOff: '♪ Musik: Aus',
+  t1: 'Schnapp dir das Gold.', t2: 'Das rote Ding… bist du. Du, vor einer Runde.', t3: 'Jede Bewegung kommt zu dir zurück.',
+  t4: 'Lila Kugel: Friss deine Vergangenheit!', eat: 'FRISS SIE!', near: 'HAARSCHARF', quick: 'SCHNELL',
+  killedBy: k => `Dein Ich aus Runde ${k} hat dich erwischt.`, killedPrev: 'Dein vorheriges Ich hat dich erwischt.',
+  killedOther: 'Das Echo von jemand anderem hat dich erwischt.', killedMem: 'Dein Ich aus einem früheren Level hat dich erwischt.',
+  killedChal: (nm, k) => `${nm} hat dich mit Runde ${k} erwischt.`, memLbl: 'altes Ich',
+  timeout: 'Die Zeit ist um. Das Gold hat auf dich gewartet.', allYou: 'alle waren du',
+  newBest: 'NEUER REKORD', again: 'NOCHMAL', story: 'Deine Geschichte', copy: 'Punkte kopieren', menu: 'Menü',
+  copied: 'Kopiert', copyFail: 'Kopieren fehlgeschlagen, markiere den Text:', paused: 'PAUSE', resume: 'WEITER',
+  nearS: 'haarscharf', eatenS: 'gefressene Vergangenheit', saveHint: 'Lange drücken oder Rechtsklick → Bild speichern',
+  download: 'Herunterladen', shareImg: 'Teilen', shareScore: 'Punkte teilen', close: 'Schließen', dailyTag: 'ECHO DES TAGES',
+  m10: '10 Echos. Es wird voll.', m20: '20 Echos. Du kämpfst gegen deine eigene Armee.', m30: '30. Deine Vergangenheit kennt dich.', m50: '50. Du bist eine Legende.',
+  share: (n, s, d) => `YANKI${d ? ' · Echo des Tages ' + d : ''}\nIch bin mir ${n}-mal selbst entkommen. ${s} Punkte.\nBerühr nicht deine Vergangenheit.`,
+  artLine: 'Jede dieser Linien warst du.', artStats: (n, s) => `${n} Echos · ${s} Punkte`, today: 'heute',
+  levels: 'LEVEL', lvlWord: 'Stufe', profile: 'Missionen ›', next: 'WEITER', map: 'Karte', back: 'Zurück',
+  lvlTag: lab => `LEVEL ${lab}`, boss: 'ABRECHNUNG',
+  bossText: 'Die Wege, die du in dieser Welt gezogen hast, kommen zurück. Jede Runde ein paar mehr.',
+  goal: n => `Sammle <b>${n}</b> Gold`, goalToast: n => `Sammle ${n} Gold.`,
+  sFinish: 'schaffen', sScore: n => `${n} Punkte`, cleared: 'LEVEL GESCHAFFT',
+  worldLock: (w, need) => `Schaff die Abrechnung von Welt ${w} und sammle insgesamt ${need} ★.`,
+  shareLvl: (lab, s) => `YANKI · Level ${lab} ${'★'.repeat(s)}\nBerühr nicht deine Vergangenheit.`,
+  artLvl: (lab, s) => `Level ${lab} · ${'★'.repeat(s)}`,
+  xpGain: n => `+${n} XP`, lvlUp: n => `STUFE ${n}!`, unlocked: s => `Neu: ${s}`,
+  tMissions: 'Missionen', tGallery: 'Galerie', tStats: 'Statistik', tLooks: 'Aussehen',
+  msNote: 'Missionen kommen am Ende jedes Spiels voran. Eine erfüllte Mission wird durch eine neue ersetzt.',
+  ms: {
+    near1: n => `${n}-mal haarscharf ausweichen in einem Spiel`, round1: n => `${n} Echos in einem Spiel erreichen`, combo1: n => `Eine ×${n}-Kombo erreichen`,
+    eatT: n => `${n} Echos mit der lila Kugel fressen`, gemsT: n => `Insgesamt ${n} Gold sammeln`, daily: () => 'Das Echo des Tages spielen',
+    starsT: n => `${n} neue ★ in Levels holen`, gamesT: n => `${n} Spiele spielen`, nearT: n => `Insgesamt ${n}-mal haarscharf ausweichen`, fever1: n => `${n} Gold in Flammen in einem Spiel sammeln`
+  },
+  sGames: 'Spiele', sGems: 'Gold', sNear: 'haarscharf', sEaten: 'gefressen', sBest: 'beste Echos', sBestScore: 'beste Punkte',
+  sCombo: 'beste Kombo', sStars: 'Sterne', sStreak: 'längste Serie', sCleared: 'geschaffte Level', sEvents: 'Events',
+  insight: (k, c) => `Am häufigsten hat dich dein Ich aus Runde ${k} erwischt (${c}-mal).`, insightNone: 'Noch hat dich keins deiner früheren Ichs erwischt.',
+  galEmpty: 'Hier sammelt sich das Lichtbild jedes Spiels, das du beendest.', galShare: 'YANKI\nBerühr nicht deine Vergangenheit.',
+  skinsT: 'DEINE FARBE', palsT: 'PALETTE FÜR DAS LICHTBILD', lockAt: n => `St. ${n}`, nameT: 'DEIN NAME (in Herausforderungen sichtbar)', namePh: 'Optional',
+  challenge: 'Herausfordern', accept: 'ANNEHMEN', chalTag: 'HERAUSFORDERUNG', chalAnon: 'Jemand',
+  chalWho: nm => `<b>${nm}</b> fordert dich heraus`,
+  chalText: n => `${n} Echos geschafft. Spiel jetzt mit dieser Vergangenheit: Jede Runde weichst du diesen Wegen aus.`,
+  chalStart: (nm, n) => `${nm}: ${n} Echos. Schlag das.`, chalBeat: nm => `Du hast ${nm} überholt! Ab hier deine eigene Vergangenheit.`,
+  chalWin: (nm, a, b) => `${nm} ${a} · DU ${b} · GEWONNEN`, chalLose: (nm, a, b) => `${nm} ${a} · DU ${b}`,
+  chalShare: (n, url) => `YANKI\nIch bin mir ${n}-mal selbst entkommen. Schaffst du mehr, gegen meine Vergangenheit?\n${url}`,
+  linkCopied: 'Link kopiert',
+  fever: 'IN FLAMMEN! Punkte ×2', feverOff: 'Die Flammen sind aus', sTime: n => `unter ${n} s`, timeS: 'Zeit', sec: n => `${n} s`,
+  bestTime: 'Bestzeit', roundLbl: k => `Runde ${k}`,
+  dailyShare: (d, n, st, kl, url) => `YANKI · Echo des Tages ${d} · ${n}\n${st}\n${kl}\n${url}`,
+  killShort: k => `Mein Ich aus Runde ${k} hat mich erwischt.`, killShortTime: 'Das Gold hat auf mich gewartet.', killShortOther: 'Die Vergangenheit hat mich eingeholt.',
+  streakT: 'SERIE', streakCard: n => `🔥 ${n} Tage in Folge`, streakNext: (d, r) => `Als Nächstes: Tag ${d} → ${r}`, streakGot: (d, r) => `🔥 Belohnung für Tag ${d}: ${r}`,
+  streakNone: 'Spiel jeden Tag das Echo des Tages; je länger die Serie, desto größer die Belohnungen.', streakLock: n => `🔥 ${n} Tage`,
+  event: 'WOCHEN-EVENT', evName: 'Wochen-Event', evLeft: n => `noch ${n} ${n === 1 ? 'Tag' : 'Tage'}`, evTag: i => `EVENT ${i}/5`, evDone: 'EVENT GESCHAFFT! +150 XP'
+};
+T.ja = {
+  tag: '<em>金</em>を取れ。<i>過去</i>に触れるな。',
+  play: 'プレイ', daily: '今日のエコー', best: 'ベスト', echoes: 'エコー', score: 'スコア', gold: 'ゴールド',
+  controls: 'マウス・指・矢印キー', controlsTouch: '画面のどこでも指でドラッグ', sndOn: '効果音: オン', sndOff: '効果音: オフ', musOn: '♪ 音楽: オン', musOff: '♪ 音楽: オフ',
+  t1: '金を取れ。', t2: 'あの赤いのは…きみだ。1ラウンド前のきみ。', t3: 'きみの動きはすべて返ってくる。',
+  t4: '紫のオーブ：過去を食べろ！', eat: '食べろ！', near: 'ギリギリ', quick: 'すばやい',
+  killedBy: k => `${k}ラウンド目のきみに捕まった。`, killedPrev: '1つ前のきみに捕まった。',
+  killedOther: 'だれかのエコーに捕まった。', killedMem: '前のステージのきみに捕まった。',
+  killedChal: (nm, k) => `${nm}の${k}ラウンド目に捕まった。`, memLbl: '昔のきみ',
+  timeout: '時間切れ。金はきみを待っていた。', allYou: 'ぜんぶ、きみだった',
+  newBest: '新記録', again: 'もう一度', story: 'きみの物語', copy: 'スコアをコピー', menu: 'メニュー',
+  copied: 'コピーしました', copyFail: 'コピーできませんでした。テキストを選択してください：', paused: '一時停止', resume: '再開',
+  nearS: 'ギリギリ', eatenS: '食べた過去', saveHint: '長押しまたは右クリック → 画像を保存',
+  download: 'ダウンロード', shareImg: '共有', shareScore: 'スコアを共有', close: '閉じる', dailyTag: '今日のエコー',
+  m10: 'エコー10。混んできた。', m20: 'エコー20。自分の軍隊と戦っている。', m30: '30。過去はきみを知っている。', m50: '50。きみは伝説だ。',
+  share: (n, s, d) => `YANKI${d ? ' · 今日のエコー ' + d : ''}\n自分から${n}回逃げた。スコア${s}。\n過去に触れるな。`,
+  artLine: 'この線は、ぜんぶきみだった。', artStats: (n, s) => `エコー${n} · スコア${s}`, today: '今日',
+  levels: 'ステージ', lvlWord: 'レベル', profile: 'ミッション ›', next: '次へ', map: 'マップ', back: '戻る',
+  lvlTag: lab => `ステージ ${lab}`, boss: '清算',
+  bossText: 'この世界で描いた道が戻ってくる。ラウンドごとに少しずつ増える。',
+  goal: n => `金を<b>${n}</b>個集めろ`, goalToast: n => `金を${n}個集めろ。`,
+  sFinish: 'クリア', sScore: n => `${n}点`, cleared: 'ステージクリア',
+  worldLock: (w, need) => `ワールド${w}の清算をクリアし、★を合計${need}個集めよう。`,
+  shareLvl: (lab, s) => `YANKI · ステージ ${lab} ${'★'.repeat(s)}\n過去に触れるな。`,
+  artLvl: (lab, s) => `ステージ ${lab} · ${'★'.repeat(s)}`,
+  xpGain: n => `+${n} XP`, lvlUp: n => `レベル${n}！`, unlocked: s => `新しく解放：${s}`,
+  tMissions: 'ミッション', tGallery: 'ギャラリー', tStats: '記録', tLooks: '見た目',
+  msNote: 'ミッションは毎回のゲーム終了時に進む。達成すると新しいミッションに入れ替わる。',
+  ms: {
+    near1: n => `1回のゲームで${n}回ギリギリでかわす`, round1: n => `1回のゲームでエコー${n}に到達`, combo1: n => `×${n}コンボに到達`,
+    eatT: n => `紫のオーブでエコーを${n}個食べる`, gemsT: n => `金を合計${n}個集める`, daily: () => '今日のエコーをプレイ',
+    starsT: n => `ステージで新しい★を${n}個獲得`, gamesT: n => `${n}回プレイ`, nearT: n => `合計${n}回ギリギリでかわす`, fever1: n => `1回のゲームで炎の状態で金を${n}個取る`
+  },
+  sGames: 'プレイ回数', sGems: '金', sNear: 'ギリギリ', sEaten: '食べた過去', sBest: '最高エコー', sBestScore: '最高スコア',
+  sCombo: '最高コンボ', sStars: '★', sStreak: '最長連続日数', sCleared: 'クリアしたステージ', sEvents: 'イベント',
+  insight: (k, c) => `いちばん多くきみを捕まえたのは${k}ラウンド目のきみ（${c}回）。`, insightNone: 'まだ過去のきみには捕まっていない。',
+  galEmpty: '終えたゲームの光の絵がここに集まる。', galShare: 'YANKI\n過去に触れるな。',
+  skinsT: 'きみの色', palsT: '光の絵のパレット', lockAt: n => `Lv ${n}`, nameT: 'きみの名前（チャレンジで表示）', namePh: '任意',
+  challenge: 'チャレンジ', accept: '受けて立つ', chalTag: 'チャレンジ', chalAnon: '友だち',
+  chalWho: nm => `<b>${nm}</b>からのチャレンジ`,
+  chalText: n => `エコー${n}に到達した。その過去でプレイしよう：毎ラウンド、その人の道をよけることになる。`,
+  chalStart: (nm, n) => `${nm}：エコー${n}。超えてみろ。`, chalBeat: nm => `${nm}を超えた！ここからは自分の過去。`,
+  chalWin: (nm, a, b) => `${nm} ${a} · きみ ${b} · 勝ち`, chalLose: (nm, a, b) => `${nm} ${a} · きみ ${b}`,
+  chalShare: (n, url) => `YANKI\n自分から${n}回逃げた。わたしの過去を相手に、超えられる？\n${url}`,
+  linkCopied: 'リンクをコピーしました',
+  fever: '炎上！スコア×2', feverOff: '炎が消えた', sTime: n => `${n}秒以内`, timeS: 'タイム', sec: n => `${n}秒`,
+  bestTime: 'ベストタイム', roundLbl: k => `${k}ラウンド目`,
+  dailyShare: (d, n, st, kl, url) => `YANKI · 今日のエコー ${d} · ${n}\n${st}\n${kl}\n${url}`,
+  killShort: k => `${k}ラウンド目の自分に捕まった。`, killShortTime: '金がわたしを待っていた。', killShortOther: '過去に追いつかれた。',
+  streakT: '連続記録', streakCard: n => `🔥 ${n}日連続`, streakNext: (d, r) => `次：${d}日目 → ${r}`, streakGot: (d, r) => `🔥 ${d}日目の報酬：${r}`,
+  streakNone: '今日のエコーを毎日プレイしよう。続くほど報酬が大きくなる。', streakLock: n => `🔥 ${n}日`,
+  event: '今週のイベント', evName: '今週のイベント', evLeft: n => `残り${n}日`, evTag: i => `イベント ${i}/5`, evDone: 'イベントクリア！+150 XP'
+};
+const LANGS = ['tr', 'en', 'es', 'pt', 'de', 'ja'];
+for (const k of LANGS) if (k !== 'en') T[k] = Object.assign({}, T.en, T[k], { ms: Object.assign({}, T.en.ms, (T[k] || {}).ms) }); // missing text falls back to English
+let lang = LANGS.includes(prefs.lang) ? prefs.lang : (LANGS.find(l => (navigator.language || '').toLowerCase().startsWith(l)) || 'en');
+{ const q = /[?&]lang=(\w\w)/.exec(location.search); if (q && LANGS.includes(q[1])) lang = q[1]; }
 const L = () => T[lang];
+const tx = o => o[lang] || o.en; // names stored per language on worlds, skins, palettes
 
 /* ---------- worlds & levels ----------
    A level is a handful of settings on top of the normal game. Ids are stable ("w3-7"),
@@ -483,20 +718,44 @@ const lid = (w, i) => `w${w + 1}-${i + 1}`;
 function levelCfg(w, i) {
   const boss = i === BOSS, t = boss ? 1 : i / (BOSS - 1);
   const goal = boss ? 10 : Math.max(4, GOALS[i] - (w >= 4 ? 1 : 0));
-  const c = Object.assign({ w, i, id: lid(w, i), goal, boss, fuse0: 5.2, fuseMin: 2.6, box: 1, pre: 0, walls: null, echoK: 1, dark: 0, mirror: false, flee: 0, dbl: false },
+  const c = Object.assign({ w, i, id: lid(w, i), label: `${w + 1}-${i + 1}`, goal, boss, fuse0: 5.2, fuseMin: 2.6, box: 1, pre: 0, walls: null, echoK: 1, dark: 0, mirror: false, flee: 0, dbl: false },
     WORLDS[w].mod(t, boss ? WALLS.length - 1 : i));
-  // ★★ is a score, ★★★ is a time: the faster you clear it, the better
-  c.s2 = goal * 40;
-  const slow = (c.walls ? 1.35 : 1) * (c.dark ? 1.2 : 1) * (c.pre ? 1.15 : 1) * (c.dbl ? 1.9 : 1) * (c.flee ? 1.25 : 1) * (c.box < 1 ? 0.9 : 1) * (boss ? 1.15 : 1);
-  c.t3 = Math.round(goal * 2 * slow);
+  return targets(c);
+}
+// ★★ is a score, ★★★ is a time: the faster you clear it, the better
+function targets(c) {
+  c.s2 = c.goal * 40;
+  const slow = (c.walls ? 1.35 : 1) * (c.dark ? 1.2 : 1) * (c.pre ? 1.15 : 1) * (c.dbl ? 1.9 : 1) * (c.flee ? 1.25 : 1) * (c.box < 1 ? 0.9 : 1) * (c.boss ? 1.15 : 1);
+  c.t3 = Math.round(c.goal * 2 * slow);
   return c;
 }
+// weekly event: five levels mixing two worlds' twists; the ISO week picks the pair, so no server is needed
+const EV_PAIRS = [[7, 8], [6, 9], [4, 5], [1, 3], [8, 6], [9, 7], [2, 3], [4, 8], [5, 9], [1, 6]];
+const EV_N = 5, EV_GOALS = [5, 6, 7, 8, 9], EV_XP = 150;
+function weekKey(d = new Date()) {
+  const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())), day = t.getUTCDay() || 7;
+  t.setUTCDate(t.getUTCDate() + 4 - day);
+  const y = t.getUTCFullYear(); return y * 100 + Math.ceil(((t - Date.UTC(y, 0, 1)) / 864e5 + 1) / 7);
+}
+const evPair = () => EV_PAIRS[weekKey() % EV_PAIRS.length];
+const evTitle = () => evPair().map(w => tx(WORLDS[w])[0]).join(' + ');
+const evDaysLeft = () => 8 - (new Date().getDay() || 7);
+function eventCfg(i) {
+  const wk = weekKey(), [a, b] = evPair(), t = i / (EV_N - 1), wi = (wk + i) % WALLS.length;
+  const c = Object.assign({ w: -1, i, ev: wk, id: `e${wk}-${i + 1}`, label: `E${i + 1}`, goal: EV_GOALS[i], boss: false, fuse0: 5.2, fuseMin: 2.6, box: 1, pre: 0, walls: null, echoK: 1, dark: 0, mirror: false, flee: 0, dbl: false },
+    WORLDS[a].mod(t, wi), WORLDS[b].mod(t, wi));
+  return targets(c);
+}
+const evRec = i => prefs.lv[`e${weekKey()}-${i + 1}`] || {};
+const evOpen = i => i === 0 || evRec(i - 1).s > 0;
+function evStars() { let s = 0; for (let i = 0; i < EV_N; i++) s += evRec(i).s || 0; return s; }
 const lrec = (w, i) => prefs.lv[lid(w, i)] || {};
 const NEED = w => w * 12;
-function totalStars() { let s = 0; for (const k in prefs.lv) s += prefs.lv[k].s || 0; return s; }
+function totalStars() { let s = 0; for (const k in prefs.lv) if (k[0] === 'w') s += prefs.lv[k].s || 0; return s; }
 function worldOpen(w) { return DEV || w === 0 || (lrec(w - 1, BOSS).s > 0 && totalStars() >= NEED(w)); }
 function levelOpen(w, i) { return worldOpen(w) && (DEV || i === 0 || lrec(w, i - 1).s > 0); }
 function nextLevel(c) {
+  if (c.ev) return c.i < EV_N - 1 && evOpen(c.i + 1) ? eventCfg(c.i + 1) : null;
   if (c.i < BOSS) return levelOpen(c.w, c.i + 1) ? levelCfg(c.w, c.i + 1) : null;
   return c.w + 1 < WORLDS.length && worldOpen(c.w + 1) ? levelCfg(c.w + 1, 0) : null;
 }
@@ -539,16 +798,36 @@ const SKINS = [
   { id: 'mint', col: '#6dffb3', at: 2, tr: 'Nane', en: 'Mint' },
   { id: 'snow', col: '#f4f6ff', at: 5, tr: 'Kar', en: 'Snow' },
   { id: 'lime', col: '#d4ff5a', at: 10, tr: 'Limon', en: 'Lime' },
-  { id: 'ice', col: '#a9c8ff', at: 16, tr: 'Buz', en: 'Ice' }
+  { id: 'ice', col: '#a9c8ff', at: 16, tr: 'Buz', en: 'Ice' },
+  { id: 'rose', col: '#ffc2e0', at: Infinity, streak: 7, tr: 'Gül', en: 'Rose' }
 ];
 const PALS = [
   { id: 'fire', at: 1, tr: 'Ateş', en: 'Fire', f: b => `hsl(${(332 + (b * 29) % 64) % 360},100%,62%)` },
   { id: 'ocean', at: 3, tr: 'Okyanus', en: 'Ocean', f: b => `hsl(${175 + (b * 23) % 70},95%,60%)` },
   { id: 'aurora', at: 7, tr: 'Kutup Işığı', en: 'Aurora', f: b => `hsl(${95 + (b * 41) % 190},90%,62%)` },
   { id: 'sunset', at: 13, tr: 'Gün Batımı', en: 'Sunset', f: b => `hsl(${(345 + (b * 17) % 60) % 360},100%,${58 + (b % 3) * 5}%)` },
-  { id: 'gold', at: 20, tr: 'Altın Çağ', en: 'Golden Age', f: b => `hsl(${38 + (b * 7) % 18},100%,${52 + (b % 4) * 6}%)` }
+  { id: 'gold', at: 20, tr: 'Altın Çağ', en: 'Golden Age', f: b => `hsl(${38 + (b * 7) % 18},100%,${52 + (b % 4) * 6}%)` },
+  { id: 'neon', at: Infinity, streak: 14, tr: 'Neon', en: 'Neon', f: b => `hsl(${(b * 53) % 360},100%,64%)` }
 ];
-const pick = (list, id) => { const l = level().l; return list.find(s => s.id === id && s.at <= l) || list[0]; };
+prefs.unl = prefs.unl || {};
+const owned = s => s.at <= level().l || !!(s.streak && prefs.unl[s.id]);
+const pick = (list, id) => list.find(s => s.id === id && owned(s)) || list[0];
+const WORLD_I18N = {
+  es: [['Primer Sonido', 'Solo tú y tu pasado. La misma regla, un objetivo claro.'], ['Cuarto Estrecho', 'La arena se encoge un poco en cada nivel.'], ['Mecha Corta', 'La mecha del oro arde mucho más rápido.'], ['Ecos Ajenos', 'Alguien pasó por aquí antes que tú. Sus rastros naranjas nunca se detienen.'], ['Muros', 'Los muros te detienen. Tus ecos siguen su camino.'], ['Pasado Veloz', 'Tus ecos corren más rápido que tú.'], ['Oscuridad', 'Solo ves lo que tienes alrededor. Los ecos salen de la oscuridad.'], ['Espejo', 'Tus ecos son tu reflejo. Si vas a la derecha, ellos van a la izquierda.'], ['Oro Fugitivo', 'El oro huye de ti. Si esperas, se escapa; acorrálalo.'], ['Oro Doble', 'Dos piezas de oro cada ronda. Coge las dos, en el orden que quieras.'], ['Cuarto Oscuro', 'Un cuarto pequeño y casi sin luz.'], ['Tormenta', 'Mecha corta, pasado veloz y rastros ajenos. Todo a la vez.']],
+  pt: [['Primeiro Som', 'Só você e o seu passado. A mesma regra, um objetivo claro.'], ['Quarto Estreito', 'A arena encolhe um pouco a cada fase.'], ['Pavio Curto', 'O pavio do ouro queima muito mais rápido.'], ['Ecos Alheios', 'Alguém passou por aqui antes de você. Os rastros laranja nunca param.'], ['Paredes', 'As paredes param você. Seus ecos seguem em frente.'], ['Passado Veloz', 'Seus ecos correm mais rápido que você.'], ['Escuridão', 'Você só vê o que está à sua volta. Os ecos saem do escuro.'], ['Espelho', 'Seus ecos são o seu reflexo. Se você vai para a direita, eles vão para a esquerda.'], ['Ouro Fujão', 'O ouro foge de você. Se esperar, ele escapa; encurrale-o.'], ['Ouro Duplo', 'Duas peças de ouro por rodada. Pegue as duas, na ordem que quiser.'], ['Quarto Escuro', 'Um quarto pequeno e quase sem luz.'], ['Tempestade', 'Pavio curto, passado veloz e rastros alheios. Tudo de uma vez.']],
+  de: [['Erster Ton', 'Nur du und deine Vergangenheit. Dieselbe Regel, ein klares Ziel.'], ['Enger Raum', 'Die Arena wird mit jedem Level etwas kleiner.'], ['Kurze Lunte', 'Die Lunte am Gold brennt viel schneller ab.'], ['Fremde Echos', 'Hier war schon jemand vor dir. Die orangen Spuren hören nie auf.'], ['Mauern', 'Mauern halten dich auf. Deine Echos laufen weiter.'], ['Schnelle Vergangenheit', 'Deine Echos sind schneller als du.'], ['Dunkelheit', 'Du siehst nur, was um dich herum ist. Echos treten aus dem Dunkel.'], ['Spiegel', 'Deine Echos sind dein Spiegelbild. Gehst du nach rechts, gehen sie nach links.'], ['Flüchtiges Gold', 'Das Gold flieht vor dir. Wartest du, ist es weg; treib es in die Ecke.'], ['Doppeltes Gold', 'Jede Runde zwei Stück Gold. Hol dir beide, in beliebiger Reihenfolge.'], ['Dunkler Raum', 'Ein kleiner Raum und fast kein Licht.'], ['Sturm', 'Kurze Lunte, schnelle Vergangenheit und fremde Spuren. Alles auf einmal.']],
+  ja: [['はじまりの音', 'きみと、きみの過去だけ。ルールは同じ、目標ははっきり。'], ['せまい部屋', 'ステージごとにアリーナが少しずつ狭くなる。'], ['短い導火線', '金の導火線がずっと速く燃える。'], ['だれかのエコー', 'きみより前に、だれかがここを歩いた。オレンジの軌跡は止まらない。'], ['壁', '壁はきみを止める。エコーはそのまま進む。'], ['速い過去', 'エコーがきみより速く走る。'], ['暗闇', '見えるのは自分のまわりだけ。エコーは暗闇から現れる。'], ['鏡', 'エコーはきみの鏡像。右へ行けば、左へ行く。'], ['逃げる金', '金がきみから逃げる。待てば遠ざかる。隅に追いつめろ。'], ['ふたつの金', '毎ラウンド金がふたつ。両方取ろう、順番は自由。'], ['暗い小部屋', '小さな部屋に、ほとんど光がない。'], ['嵐', '短い導火線、速い過去、だれかの軌跡。ぜんぶ一度に。']]
+};
+WORLDS.forEach((w, i) => { for (const k in WORLD_I18N) if (WORLD_I18N[k][i]) w[k] = WORLD_I18N[k][i]; });
+const NAME_I18N = {
+  cyan: { es: 'Cian', pt: 'Ciano', de: 'Cyan', ja: 'シアン' }, mint: { es: 'Menta', pt: 'Menta', de: 'Minze', ja: 'ミント' },
+  snow: { es: 'Nieve', pt: 'Neve', de: 'Schnee', ja: 'スノー' }, lime: { es: 'Lima', pt: 'Lima', de: 'Limette', ja: 'ライム' },
+  ice: { es: 'Hielo', pt: 'Gelo', de: 'Eis', ja: 'アイス' }, rose: { es: 'Rosa', pt: 'Rosa', de: 'Rose', ja: 'ローズ' },
+  fire: { es: 'Fuego', pt: 'Fogo', de: 'Feuer', ja: '炎' }, ocean: { es: 'Océano', pt: 'Oceano', de: 'Ozean', ja: '海' },
+  aurora: { es: 'Aurora', pt: 'Aurora', de: 'Polarlicht', ja: 'オーロラ' }, sunset: { es: 'Atardecer', pt: 'Pôr do Sol', de: 'Sonnenuntergang', ja: '夕焼け' },
+  gold: { es: 'Edad Dorada', pt: 'Era de Ouro', de: 'Goldenes Zeitalter', ja: '黄金時代' }, neon: { es: 'Neón', pt: 'Neon', de: 'Neon', ja: 'ネオン' }
+};
+SKINS.concat(PALS).forEach(s => Object.assign(s, NAME_I18N[s.id] || {}));
 let YOU = pick(SKINS, prefs.skin).col, PALF = pick(PALS, prefs.pal).f;
 
 /* ---------- rng & dates ---------- */
@@ -559,10 +838,15 @@ const todayStr = () => dateStr(new Date());
 const yesterdayStr = () => { const d = new Date(); d.setDate(d.getDate() - 1); return dateStr(d); };
 const streakNow = () => (prefs.streakDate === todayStr() || prefs.streakDate === yesterdayStr()) ? prefs.streak || 0 : 0;
 function bumpStreak() {
-  const d = todayStr(); if (prefs.streakDate === d) return;
+  const d = todayStr(); if (prefs.streakDate === d) return 0;
   prefs.streak = prefs.streakDate === yesterdayStr() ? (prefs.streak || 0) + 1 : 1; prefs.streakDate = d;
   prefs.streakBest = Math.max(prefs.streakBest || 0, prefs.streak);
+  return prefs.streak;
 }
+// every day of the streak pays a little more; days 7 and 14 unlock things you can only get this way
+const STREAK = { 1: 20, 2: 30, 3: 50, 4: 60, 5: 80, 6: 90, 7: 'rose', 14: 'neon' };
+const streakReward = d => STREAK[d] !== undefined ? STREAK[d] : d % 7 === 0 ? 100 : 40;
+function rewardText(r) { if (typeof r === 'number') return L().xpGain(r); const it = SKINS.concat(PALS).find(x => x.id === r); return it ? tx(it) : ''; }
 
 /* ---------- audio ---------- */
 const Snd = {
@@ -769,7 +1053,7 @@ function startGame(opts) {
   const seed = daily ? hashStr('YANKI-' + todayStr()) : c ? hashStr('YANKI-L-' + c.id) : ch ? ch.seed : (Math.random() * 4294967296) >>> 0;
   G = {
     mode: 'play', opts, kind, daily, cfg: c, seed, round: 1, score: 0, combo: 1, maxCombo: 1, ghosts: [], allPaths: [], rec: [], step: 0, tstep: 0,
-    px: 0, py: 0, vx: 0, vy: 0, gem: null, extra: null, orb: null, fright: 0, frightEats: 0, chal: null, memPool: [], memI: 0, next: null, stars: 0, fever: false, feverGems: 0,
+    px: 0, py: 0, vx: 0, vy: 0, gem: null, extra: null, orb: null, fright: 0, frightEats: 0, chal: null, memPool: [], memI: 0, next: null, stars: 0, fever: false, feverGems: 0, log: [], nearAt: 0,
     fuse: 0, fuseMax: 0, near: 0, eaten: 0, killer: null, deathT: 0, slow: 0, shake: 0, flash: 0, overT: 0, lastTick: 0
   };
   layout();
@@ -816,6 +1100,7 @@ function addPre(count, rng) {
 
 // the reckoning replays paths you won earlier levels of this world with
 function remember(c) {
+  if (c.ev) return;
   const paths = G.allPaths.slice(-3).map(p => encPath(p.path, p.n));
   (mem[c.w] = mem[c.w] || {})[c.i] = paths; store(MEM_KEY, mem);
 }
@@ -830,7 +1115,7 @@ function memPool(w) {
 }
 
 function newRound(first) {
-  G.rec = []; G.step = 0;
+  G.rec = []; G.step = 0; G.nearAt = G.near;
   const c = G.cfg;
   G.fuseMax = Math.max(c ? c.fuseMin : 2.6, (c ? c.fuse0 : 5.2) - (G.round - 1) * 0.06); G.fuse = G.fuseMax;
   G.ghosts = G.ghosts.filter(g => !g.once);
@@ -885,7 +1170,7 @@ cv.addEventListener('pointermove', e => {
 const endTouch = e => { if (e.pointerId === touch.id) touch.id = null; };
 cv.addEventListener('pointerup', endTouch); cv.addEventListener('pointercancel', endTouch);
 window.addEventListener('keydown', e => {
-  if (e.target && e.target.tagName === 'INPUT') return;
+  if (e.target && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) return;
   const k = e.key;
   if (['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'w', 'a', 's', 'd', 'W', 'A', 'S', 'D'].includes(k)) { keys.add(k.toLowerCase()); ptr.mode = 'keys'; e.preventDefault(); }
   if ((k === 'p' || k === 'P' || k === 'Escape') && G.mode === 'play') { pause(); e.preventDefault(); }
@@ -997,6 +1282,7 @@ function collect() {
   if (!G.fever && G.combo >= 5) { G.fever = true; toast(L().fever, 1.6); Snd.fever(); buzz(20); G.flash = 0.3; }
   else if (G.fever && G.combo < 5) { G.fever = false; toast(L().feverOff, 1.2); }
   if (G.fever) G.feverGems++;
+  G.log.push(G.fever ? '🔥' : quick ? '⚡' : G.near > G.nearAt ? '🌀' : '🟡');
   const pts = gemValue() * G.combo * (G.fever ? 2 : 1); G.score += pts;
   const path = Float32Array.from(G.rec);
   G.allPaths.push({ path, n: path.length / 2, born: G.round, final: false });
@@ -1024,7 +1310,7 @@ function eatGhost(g, x, y) {
 }
 
 function die(killer) {
-  G.mode = 'dying'; G.killer = killer; G.deathT = 0;
+  G.mode = 'dying'; G.killer = killer; G.deathT = 0; G.log.push(killer ? '💀' : '⏳');
   G.allPaths.push({ path: Float32Array.from(G.rec), n: G.rec.length / 2, born: G.round, final: true });
   burst(G.px, G.py, YOU, 60, 0.9); if (killer) burst(G.px, G.py, killer.col, 30, 0.6);
   G.shake = reduceMotion ? 0 : 14; G.flash = 0.6; Snd.die(); Snd.droneOff(); Snd.musOff(); buzz([40, 40, 90]);
@@ -1056,7 +1342,11 @@ function gameOver(won) {
     isBest = n > prefs.best; if (isBest) prefs.best = n;
     prefs.bestScore = Math.max(prefs.bestScore || 0, G.score);
   }
-  if (G.daily) { const d = todayStr(); if (prefs.dailyDate !== d) { prefs.dailyDate = d; prefs.dailyBest = 0; } prefs.dailyBest = Math.max(prefs.dailyBest || 0, n); bumpStreak(); }
+  let sDay = 0, sRw = null;
+  if (G.daily) {
+    const d = todayStr(); if (prefs.dailyDate !== d) { prefs.dailyDate = d; prefs.dailyBest = 0; } prefs.dailyBest = Math.max(prefs.dailyBest || 0, n);
+    sDay = bumpStreak(); if (sDay) { sRw = streakReward(sDay); if (typeof sRw === 'string') prefs.unl[sRw] = 1; }
+  }
   if (c) {
     rec = Object.assign({ s: 0, b: 0 }, prefs.lv[c.id]);
     if (won) {
@@ -1065,7 +1355,7 @@ function gameOver(won) {
       rec.t = Math.min(rec.t || Infinity, Math.round(secs * 10) / 10);
       if (!rec.s) ST.cleared++;
       newStars = Math.max(0, G.stars - rec.s); rec.s = Math.max(rec.s, G.stars);
-      if (!c.boss) remember(c);
+      if (!c.boss && !c.ev) remember(c);
     }
     rec.b = Math.max(rec.b, G.score); prefs.lv[c.id] = rec;
   }
@@ -1074,7 +1364,10 @@ function gameOver(won) {
     near1: G.near, round1: c ? 0 : n, combo1: G.maxCombo, eatT: G.eaten, gemsT: n, daily: G.daily ? 1 : 0,
     starsT: newStars, gamesT: 1, nearT: G.near, fever1: G.feverGems
   });
-  const xp = n + G.near + 2 * G.eaten + (won ? 15 : 0) + newStars * 10 + done.reduce((s, m) => s + m.xp, 0);
+  const evDone = !!(won && c && c.ev && c.i === EV_N - 1 && prefs.evDone !== c.ev);
+  if (evDone) { prefs.evDone = c.ev; ST.events = (ST.events || 0) + 1; }
+  const xp = n + G.near + 2 * G.eaten + (won ? 15 : 0) + newStars * 10 + done.reduce((s, m) => s + m.xp, 0)
+    + (typeof sRw === 'number' ? sRw : 0) + (evDone ? EV_XP : 0);
   prefs.xp += xp;
   const after = level();
   G.next = won && c ? nextLevel(c) : null;
@@ -1097,10 +1390,13 @@ function gameOver(won) {
   let h = `<span>${L().xpGain(xp)} · ${L().lvlWord} ${after.l} ${bar(after.x, after.n)}</span>`;
   if (after.l > before.l) {
     h += `<span class="up">${L().lvlUp(after.l)}</span>`;
-    const got = SKINS.concat(PALS).filter(s => s.at > before.l && s.at <= after.l).map(s => s[lang]);
+    const got = SKINS.concat(PALS).filter(s => s.at > before.l && s.at <= after.l).map(tx);
     if (got.length) h += `<span class="up">${L().unlocked(got.join(', '))}</span>`;
   }
   done.forEach(m => { h += `<span class="ms">✓ ${L().ms[m.t](m.n)} · +${m.xp} XP</span>`; });
+  if (sDay) h += `<span class="ms">${L().streakGot(sDay, rewardText(sRw))}</span>`;
+  if (evDone) h += `<span class="up">${L().evDone}</span>`;
+  $('oStrip').hidden = !G.daily; $('oStrip').textContent = G.daily ? strip() : '';
   $('oXp').innerHTML = h;
   $('nextBtn').hidden = !G.next;
   $('againBtn').className = G.next ? 'chip' : 'big';
@@ -1155,7 +1451,7 @@ function draw(dt) {
     const g = G.killer, i = Math.min(gIdx(g, idx), g.n - 1), x = X(g.path[2 * i]), y = Y(g.path[2 * i + 1]);
     const r = R * U * (2.2 + Math.sin(G.deathT * 12) * 0.3);
     ctx.strokeStyle = g.col; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.stroke();
-    const lbl = g.pre ? '' : g.mem ? L().memLbl : g.ch ? G.chal.name : lang === 'tr' ? `${g.born}. tur` : `round ${g.born}`;
+    const lbl = g.pre ? '' : g.mem ? L().memLbl : g.ch ? G.chal.name : L().roundLbl(g.born);
     ctx.fillStyle = g.col; ctx.font = `700 13px ${cssVar('--f-num')}`; ctx.textAlign = 'center';
     if (lbl) ctx.fillText(lbl, x, y - r - 8);
   }
@@ -1333,7 +1629,7 @@ function makeArt() {
   x.font = `600 26px ${cssVar('--f-num')}`; x.fillStyle = '#8a8fb3'; x.textAlign = 'right';
   x.fillText((G.daily ? L().dailyTag + ' · ' : '') + todayStr(), 1000, 128);
   x.textAlign = 'left'; x.font = `700 64px ${cssVar('--f-num')}`; x.fillStyle = '#eef0ff';
-  x.fillText(c0 && G.stars ? L().artLvl(c0.w + 1, c0.i + 1, G.stars) : L().artStats(n, G.score), 80, 1222);
+  x.fillText(c0 && G.stars ? L().artLvl(c0.label, G.stars) : L().artStats(n, G.score), 80, 1222);
   x.font = `400 30px ${cssVar('--f-ui')}`; x.fillStyle = '#8a8fb3'; x.fillText(L().artLine, 80, 1282);
   return c;
 }
@@ -1361,7 +1657,11 @@ async function shareArt(text) {
     await NP.Share.share({ title: 'YANKI', text, files: [w.uri], dialogTitle: 'YANKI' });
   } catch (e) { /* user cancelled or sharing unavailable */ }
 }
-const shareText = () => G.cfg && G.stars ? L().shareLvl(G.cfg.w + 1, G.cfg.i + 1, G.stars) : L().share(G.round - 1, G.score, G.daily ? todayStr() : '');
+// one emoji per round, Wordle-style: tells the story of the run without showing it
+const strip = () => G.log.reduce((a, e, i) => a + (i && !(i % 10) ? '\n' : '') + e, '');
+function killShort() { const k = G.killer; return !k ? L().killShortTime : k.pre || k.ch || k.mem ? L().killShortOther : L().killShort(k.born); }
+const shareText = () => G.cfg && G.stars ? L().shareLvl(G.cfg.label, G.stars)
+  : G.daily ? L().dailyShare(todayStr(), G.round - 1, strip(), killShort(), CHAL_URL) : L().share(G.round - 1, G.score, '');
 function download() {
   if (!artURL) return;
   if (NATIVE) return shareArt(artBack === 'over' ? shareText() : L().galShare);
@@ -1406,40 +1706,47 @@ function openChal(c) {
 const esc = s => String(s).replace(/[&<>"']/g, ch => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[ch]);
 
 /* ---------- level map ---------- */
-let mapW = -1, pendingLvl = null;
+let mapW = -1, mapEv = false, pendingLvl = null;
 function openLevels(w) {
+  mapEv = false;
   if (w !== undefined) mapW = w;
   else if (mapW < 0) { mapW = 0; while (mapW + 1 < WORLDS.length && worldOpen(mapW + 1)) mapW++; }
   renderMap(); showScreen('levels');
 }
+function openEvent() { mapEv = true; renderMap(); showScreen('levels'); }
 function renderMap() {
-  const w = mapW, wn = WORLDS[w][lang];
-  let s = 0; for (let i = 0; i < PER_WORLD; i++) s += lrec(w, i).s || 0;
-  $('wName').textContent = `${w + 1}. ${wn[0]}`; $('wTwist').textContent = wn[1]; $('wStars').textContent = `★ ${s}/${PER_WORLD * 3}`;
+  const w = mapW, ev = mapEv, N = ev ? EV_N : PER_WORLD, wn = ev ? null : tx(WORLDS[w]);
+  const rec = i => ev ? evRec(i) : lrec(w, i), canOpen = i => ev ? evOpen(i) : levelOpen(w, i);
+  let s = 0; for (let i = 0; i < N; i++) s += rec(i).s || 0;
+  $('wName').textContent = ev ? L().evName : `${w + 1}. ${wn[0]}`;
+  $('wTwist').textContent = ev ? `${evTitle()} · ${L().evLeft(evDaysLeft())}` : wn[1];
+  $('wStars').textContent = `★ ${s}/${N * 3}`;
+  $('wPrev').style.visibility = $('wNext').style.visibility = ev ? 'hidden' : '';
   $('wPrev').disabled = w === 0; $('wNext').disabled = w === WORLDS.length - 1;
-  const pos = i => [50 + Math.sin(i * 1.25) * 30, 94 - i * (88 / (PER_WORLD - 1))];
-  let d = ''; for (let i = 0; i < PER_WORLD; i++) { const [x, y] = pos(i); d += (i ? 'L' : 'M') + x + ' ' + y; }
+  const pos = i => [50 + Math.sin(i * 1.25) * 30, 94 - i * (88 / (N - 1))];
+  let d = ''; for (let i = 0; i < N; i++) { const [x, y] = pos(i); d += (i ? 'L' : 'M') + x + ' ' + y; }
   const map = $('lvMap');
   map.innerHTML = `<svg viewBox="0 0 100 100" preserveAspectRatio="none"><path d="${d}" fill="none" stroke="rgba(126,249,255,.3)" stroke-width="2" stroke-dasharray="4 6" vector-effect="non-scaling-stroke"/></svg>`;
-  const open = worldOpen(w); let cur = false;
-  for (let i = 0; i < PER_WORLD; i++) {
-    const [x, y] = pos(i), rec = lrec(w, i), ok = levelOpen(w, i), b = document.createElement('button');
-    b.className = 'node' + (i === BOSS ? ' boss' : '') + (ok ? '' : ' lock') + (rec.s ? ' done' : '');
-    if (ok && !rec.s && !cur) { cur = true; b.classList.add('cur'); }
+  const open = ev || worldOpen(w); let cur = false;
+  for (let i = 0; i < N; i++) {
+    const [x, y] = pos(i), r = rec(i), ok = canOpen(i), b = document.createElement('button');
+    b.className = 'node' + (i === N - 1 ? ' boss' : '') + (ok ? '' : ' lock') + (r.s ? ' done' : '');
+    if (ok && !r.s && !cur) { cur = true; b.classList.add('cur'); }
     b.style.left = x + '%'; b.style.top = y + '%';
-    b.innerHTML = (ok ? i + 1 : '🔒') + (rec.s ? `<span class="st">${'★'.repeat(rec.s)}<i>${'★'.repeat(3 - rec.s)}</i></span>` : '');
-    b.setAttribute('aria-label', L().lvlTag(w + 1, i + 1));
-    if (ok) b.onclick = () => openLevel(w, i); else b.disabled = true;
+    b.innerHTML = (ok ? i + 1 : '🔒') + (r.s ? `<span class="st">${'★'.repeat(r.s)}<i>${'★'.repeat(3 - r.s)}</i></span>` : '');
+    const cfg = () => ev ? eventCfg(i) : levelCfg(w, i);
+    b.setAttribute('aria-label', ev ? L().evTag(i + 1) : L().lvlTag(`${w + 1}-${i + 1}`));
+    if (ok) b.onclick = () => openLevel(cfg()); else b.disabled = true;
     map.appendChild(b);
   }
   if (!open) { const o = document.createElement('div'); o.className = 'wlock'; o.innerHTML = `<b>🔒</b>${esc(L().worldLock(w, NEED(w)))}<span class="ws">★ ${totalStars()}/${NEED(w)}</span>`; map.appendChild(o); }
 }
-function openLevel(w, i) {
-  const c = levelCfg(w, i), rec = lrec(w, i);
+function openLevel(c) {
+  const rec = prefs.lv[c.id] || {};
   pendingLvl = c;
-  $('lTag').textContent = c.boss ? `${w + 1}-${i + 1} · ${L().boss}` : L().lvlTag(w + 1, i + 1);
-  $('lName').textContent = WORLDS[w][lang][0];
-  $('lTwist').textContent = c.boss ? L().bossText : WORLDS[w][lang][1];
+  $('lTag').textContent = c.ev ? L().evTag(c.i + 1) : c.boss ? `${c.label} · ${L().boss}` : L().lvlTag(c.label);
+  $('lName').textContent = c.ev ? L().evName : tx(WORLDS[c.w])[0];
+  $('lTwist').textContent = c.ev ? evTitle() : c.boss ? L().bossText : tx(WORLDS[c.w])[1];
   $('lGoal').innerHTML = L().goal(c.goal);
   $('lStars').innerHTML = [['★', L().sFinish], ['★★', L().sScore(c.s2)], ['★★★', L().sTime(c.t3)]]
     .map(([st, t], k) => `<span${(rec.s || 0) > k ? ' class="got"' : ''}><b>${st}</b>${t}</span>`).join('');
@@ -1457,26 +1764,29 @@ function renderProfile() {
   const lv = level(), body = $('pBody');
   let h = `<p class="sec">${L().lvlWord.toUpperCase()} ${lv.l} · ${lv.x}/${lv.n} XP</p>`;
   if (pTab === 'ms') {
-    h += prefs.ms.map(m => `<div class="ms-card"><p>${L().ms[m.t](m.n)}</p><span class="bar"><i style="width:${Math.min(100, Math.round(m.p / m.n * 100))}%"></i></span><small><span>${Math.min(m.p, m.n)}/${m.n}</span><b>+${m.xp} XP</b></small></div>`).join('');
+    const sk = streakNow(), nd = sk + 1;
+    h += `<p class="sec">${L().streakT}</p><div class="ms-card"><p>${sk ? L().streakCard(sk) : L().streakNone}</p><small><span>${L().streakNext(nd, rewardText(streakReward(nd)))}</span></small></div>`;
+    h += `<p class="sec">${L().tMissions.toUpperCase()}</p>` + prefs.ms.map(m => `<div class="ms-card"><p>${L().ms[m.t](m.n)}</p><span class="bar"><i style="width:${Math.min(100, Math.round(m.p / m.n * 100))}%"></i></span><small><span>${Math.min(m.p, m.n)}/${m.n}</span><b>+${m.xp} XP</b></small></div>`).join('');
     h += `<p class="hint">${L().msNote}</p>`;
   } else if (pTab === 'gal') {
     h += gal.length ? `<div class="gal">${gal.map((g, i) => `<img src="${g.d}" data-g="${i}" alt="${esc(g.t)}">`).join('')}</div>` : `<p class="empty">${L().galEmpty}</p>`;
   } else if (pTab === 'st') {
     const cells = [[prefs.games, L().sGames], [ST.gems, L().sGems], [ST.near, L().sNear], [ST.eaten, L().sEaten], [prefs.best, L().sBest], [prefs.bestScore || 0, L().sBestScore],
-      ['×' + ST.combo, L().sCombo], [totalStars(), L().sStars], [ST.cleared, L().sCleared], [prefs.streakBest || 0, L().sStreak]];
+      ['×' + ST.combo, L().sCombo], [totalStars(), L().sStars], [ST.cleared, L().sCleared], [prefs.streakBest || 0, L().sStreak], [ST.events || 0, L().sEvents]];
     h += `<div class="st-grid">${cells.map(([v, t]) => `<div><b>${v}</b><span>${t}</span></div>`).join('')}</div>`;
     let kb = 0, kc = 0; for (const b in ST.kill) if (ST.kill[b] > kc) { kc = ST.kill[b]; kb = b; }
     h += `<p class="insight">${kc ? L().insight(kb, kc) : L().insightNone}</p>`;
   } else {
     const cur = pick(SKINS, prefs.skin).id, curP = pick(PALS, prefs.pal).id;
-    h += `<p class="sec">${L().skinsT}</p><div class="looks">${SKINS.map(s => `<button class="look${s.id === cur ? ' on' : ''}${s.at > lv.l ? ' lock' : ''}" data-skin="${s.id}"><i style="background:${s.col};box-shadow:0 0 12px ${s.col}"></i>${s[lang]}${s.at > lv.l ? `<small>${L().lockAt(s.at)}</small>` : ''}</button>`).join('')}</div>`;
-    h += `<p class="sec">${L().palsT}</p><div class="looks">${PALS.map(p => `<button class="look${p.id === curP ? ' on' : ''}${p.at > lv.l ? ' lock' : ''}" data-pal="${p.id}"><i style="background:linear-gradient(135deg,${p.f(1)},${p.f(3)},${p.f(6)})"></i>${p[lang]}${p.at > lv.l ? `<small>${L().lockAt(p.at)}</small>` : ''}</button>`).join('')}</div>`;
+    const lk = x => owned(x) ? '' : `<small>${x.streak ? L().streakLock(x.streak) : L().lockAt(x.at)}</small>`;
+    h += `<p class="sec">${L().skinsT}</p><div class="looks">${SKINS.map(s => `<button class="look${s.id === cur ? ' on' : ''}${owned(s) ? '' : ' lock'}" data-skin="${s.id}"><i style="background:${s.col};box-shadow:0 0 12px ${s.col}"></i>${tx(s)}${lk(s)}</button>`).join('')}</div>`;
+    h += `<p class="sec">${L().palsT}</p><div class="looks">${PALS.map(p => `<button class="look${p.id === curP ? ' on' : ''}${owned(p) ? '' : ' lock'}" data-pal="${p.id}"><i style="background:linear-gradient(135deg,${p.f(1)},${p.f(3)},${p.f(6)})"></i>${tx(p)}${lk(p)}</button>`).join('')}</div>`;
     h += `<p class="sec">${L().nameT}</p><input id="nameIn" maxlength="20" autocomplete="off" placeholder="${L().namePh}" value="${esc(prefs.name || '')}">`;
   }
   body.innerHTML = h;
   body.querySelectorAll('[data-g]').forEach(img => { img.onclick = () => { artURL = gal[+img.dataset.g].d; showArt('profile'); }; });
-  body.querySelectorAll('[data-skin]').forEach(b => { b.onclick = () => { const s = SKINS.find(x => x.id === b.dataset.skin); if (s.at > level().l) return; prefs.skin = s.id; YOU = s.col; save(); renderProfile(); }; });
-  body.querySelectorAll('[data-pal]').forEach(b => { b.onclick = () => { const p = PALS.find(x => x.id === b.dataset.pal); if (p.at > level().l) return; prefs.pal = p.id; PALF = p.f; save(); renderProfile(); }; });
+  body.querySelectorAll('[data-skin]').forEach(b => { b.onclick = () => { const s = SKINS.find(x => x.id === b.dataset.skin); if (!owned(s)) return; prefs.skin = s.id; YOU = s.col; save(); renderProfile(); }; });
+  body.querySelectorAll('[data-pal]').forEach(b => { b.onclick = () => { const p = PALS.find(x => x.id === b.dataset.pal); if (!owned(p)) return; prefs.pal = p.id; PALF = p.f; save(); renderProfile(); }; });
   const ni = $('nameIn'); if (ni) ni.oninput = () => { prefs.name = ni.value.slice(0, 20); save(); };
 }
 
@@ -1500,6 +1810,7 @@ function refreshMenu() {
   const db = prefs.dailyDate === todayStr() ? prefs.dailyBest || 0 : 0, sk = streakNow();
   $('dailyBest').textContent = (sk ? '🔥' + sk + ' · ' : '') + (db ? `${L().today}: ${db}` : todayStr());
   $('mStars').textContent = `★ ${totalStars()}/${WORLDS.length * PER_WORLD * 3}`;
+  $('mEvent').textContent = `★ ${evStars()}/${EV_N * 3} · ${L().evLeft(evDaysLeft())}`;
   const lv = level(); $('mLvl').textContent = lv.l; $('mBar').style.width = Math.round(lv.x / lv.n * 100) + '%';
 }
 function applyLang() {
@@ -1509,12 +1820,12 @@ function applyLang() {
   if (NATIVE || matchMedia('(pointer: coarse)').matches) document.querySelector('#menu [data-i="controls"]').textContent = L().controlsTouch;
   $('sndBtn').textContent = prefs.snd ? L().sndOn : L().sndOff; $('sndBtn').classList.toggle('off', !prefs.snd);
   $('musBtn').textContent = prefs.mus ? L().musOn : L().musOff; $('musBtn').classList.toggle('off', !prefs.mus);
-  $('langSeg').querySelectorAll('button').forEach(b => { const on = b.dataset.l === lang; b.classList.toggle('on', on); b.setAttribute('aria-pressed', on); });
+  $('langSel').value = lang;
   if (NATIVE) { $('dlBtn').textContent = L().shareImg; $('copyBtn').textContent = L().shareScore; document.querySelector('#art [data-i="saveHint"]').hidden = true; }
   refreshMenu();
 }
 function toMenu() { G = { mode: 'menu' }; fx = []; texts = []; Snd.droneOff(); Snd.musOff(); $('hud').hidden = true; $('pauseBtn').hidden = true; refreshMenu(); showScreen('menu'); }
-function toLevels() { const w = G.cfg ? G.cfg.w : undefined; toMenu(); openLevels(w); }
+function toLevels() { const c = G.cfg; toMenu(); if (c && c.ev) openEvent(); else openLevels(c ? c.w : undefined); }
 
 $('playBtn').onclick = () => startGame({});
 $('dailyBtn').onclick = () => startGame({ daily: true });
@@ -1532,13 +1843,14 @@ $('wPrev').onclick = () => { if (mapW > 0) { mapW--; renderMap(); } };
 $('wNext').onclick = () => { if (mapW < WORLDS.length - 1) { mapW++; renderMap(); } };
 $('lvBack').onclick = () => showScreen('menu');
 $('lPlay').onclick = () => { if (pendingLvl) startGame({ level: pendingLvl }); };
-$('lBack').onclick = () => openLevels();
+$('lBack').onclick = () => (pendingLvl && pendingLvl.ev ? openEvent() : openLevels());
 $('pBack').onclick = () => { refreshMenu(); showScreen('menu'); };
 $('cPlay').onclick = () => { if (incoming) startGame({ chal: incoming }); };
 $('cBack').onclick = () => showScreen('menu');
 $('sndBtn').onclick = () => { prefs.snd = !prefs.snd; save(); Snd.init(); if (!prefs.snd) Snd.droneOff(); else Snd.tone(660, 0.12, 'triangle', 0.14); applyLang(); };
 $('musBtn').onclick = () => { prefs.mus = !prefs.mus; save(); Snd.init(); if (!prefs.mus) Snd.musOff(); applyLang(); };
-$('langSeg').querySelectorAll('button').forEach(b => { b.onclick = () => { lang = b.dataset.l; prefs.lang = lang; save(); applyLang(); }; });
+$('langSel').onchange = () => { lang = $('langSel').value; prefs.lang = lang; save(); applyLang(); };
+$('eventBtn').onclick = openEvent;
 // overlay buttons swallow pointer events so they never steer the player
 document.querySelectorAll('.screen').forEach(s => s.addEventListener('pointerdown', e => e.stopPropagation()));
 
@@ -1571,10 +1883,10 @@ raf(loop);
 incoming = readChal();
 if (incoming && !BOT) openChal(incoming);
 const shot = /[?&]shot=(\w+)/.exec(location.search);
-if (shot) setTimeout(() => { const s = shot[1]; if (s === 'levels') openLevels(); else if (s === 'lvl') openLevel(0, 2); else if (s === 'profile') openProfile(); else if (['ms', 'gal', 'st', 'look'].includes(s)) openProfile(s); }, 100);
+if (shot) setTimeout(() => { const s = shot[1]; if (s === 'levels') openLevels(); else if (s === 'lvl') openLevel(levelCfg(0, 2)); else if (s === 'event') openEvent(); else if (s === 'profile') openProfile(); else if (['ms', 'gal', 'st', 'look'].includes(s)) openProfile(s); }, 100);
 if (BOT) {
-  const m = /[?&]lvl=w(\d+)-(\d+)/.exec(location.search);
-  setTimeout(() => startGame(m ? { level: levelCfg(+m[1] - 1, +m[2] - 1) } : incoming ? { chal: incoming } : {}), 300);
+  const m = /[?&]lvl=w(\d+)-(\d+)/.exec(location.search), me = /[?&]ev=(\d)/.exec(location.search);
+  setTimeout(() => startGame(m ? { level: levelCfg(+m[1] - 1, +m[2] - 1) } : me ? { level: eventCfg(+me[1] - 1) } : /daily/.test(location.search) ? { daily: true } : incoming ? { chal: incoming } : {}), 300);
   // headless screenshots don't present timer-driven canvas frames; mirror the canvas into an <img> for test captures
   const dbg = document.createElement('img'); dbg.style.cssText = 'position:fixed;inset:0;width:100%;height:100%;z-index:1;pointer-events:none';
   document.body.appendChild(dbg); setInterval(() => { dbg.src = cv.toDataURL(); }, 250);
@@ -1592,7 +1904,7 @@ if (NATIVE) {
     // Android back button walks back through the screens, and leaves the app from the menu
     App.addListener('backButton', () => {
       if (!$('art').hidden) $('artClose').onclick();
-      else if (!$('lvl').hidden) openLevels();
+      else if (!$('lvl').hidden) $('lBack').onclick();
       else if (!$('levels').hidden || !$('profile').hidden || !$('chal').hidden) { refreshMenu(); showScreen('menu'); }
       else if (G.mode === 'play') pause();
       else if (G.mode === 'paused' || G.mode === 'over') (G.cfg ? toLevels() : toMenu());

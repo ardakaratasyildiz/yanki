@@ -115,6 +115,9 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 
 #pause{background:rgba(6,6,12,.78)}
 #pause h2{margin:0;font:700 16px var(--f-num);letter-spacing:.4em;color:var(--dim)}
+#revive{background:rgba(6,6,12,.8)}
+#revive h2{margin:0;font:800 clamp(24px,7vw,34px) var(--f-ui);letter-spacing:.08em;color:var(--you)}
+#revive p{margin:0;max-width:30ch;text-align:center;color:var(--dim);font-size:14px;line-height:1.5}
 
 #art{background:rgba(6,6,12,.94);gap:12px}
 #artImg{max-width:min(92vw,440px);max-height:68vh;border-radius:6px;box-shadow:0 0 0 1px rgba(138,143,179,.25),0 20px 60px rgba(0,0,0,.6);user-select:auto;-webkit-user-select:auto;-webkit-touch-callout:default}
@@ -123,9 +126,9 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 
 .alt2{font-weight:700;font-size:15px;letter-spacing:.18em;padding:13px 32px;border-radius:999px;border:1px solid rgba(126,249,255,.6);color:var(--you);background:rgba(10,10,22,.5);cursor:pointer;display:inline-flex;gap:10px;align-items:baseline}
 .alt2 small{font-family:var(--f-num);color:var(--gold);font-size:12px;letter-spacing:.04em}
-#profBtn{display:flex;align-items:center;gap:10px;background:transparent;border:0;color:var(--dim);font:600 13px var(--f-ui);letter-spacing:.06em;cursor:pointer;padding:6px 10px}
+#profBtn{display:flex;align-items:center;gap:10px;background:rgba(10,10,22,.5);border:1px solid rgba(126,249,255,.45);border-radius:999px;color:var(--dim);font:600 13px var(--f-ui);letter-spacing:.06em;cursor:pointer;padding:9px 18px}
 #profBtn b{color:var(--ink);font-family:var(--f-num)}
-#profBtn em{font-style:normal;color:var(--you);font-size:12px}
+#profBtn em{font-style:normal;color:var(--you);font-weight:800;letter-spacing:.12em}
 .bar{width:90px;height:6px;border-radius:3px;background:rgba(138,143,179,.25);overflow:hidden;display:inline-block;vertical-align:middle}
 .bar i{display:block;height:100%;background:var(--you);width:0}
 
@@ -231,10 +234,11 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
   <button id="eventBtn" class="alt3"><span data-i="event"></span><small id="mEvent"></small></button>
   <button id="dailyBtn" class="alt"><span data-i="daily">Günün Yankısı</span><small id="dailyBest"></small></button>
   <div class="meta"><span data-i="best">En iyi</span><b id="mBest">0</b></div>
-  <button id="profBtn"><span data-i="lvlWord">Seviye</span><b id="mLvl">1</b><span class="bar"><i id="mBar"></i></span><em data-i="profile"></em></button>
+  <button id="profBtn"><em>👤 <span data-i="profile"></span></em><span data-i="lvlWord">Seviye</span><b id="mLvl">1</b><span class="bar"><i id="mBar"></i></span></button>
   <div class="row">
     <button id="sndBtn" class="chip tog"></button>
     <button id="musBtn" class="chip tog"></button>
+    <button id="sensBtn" class="chip tog"></button>
     <label class="chip langsel">🌐 <select id="langSel" aria-label="Dil / Language"><option value="tr">Türkçe</option><option value="en">English</option><option value="es">Español</option><option value="pt">Português</option><option value="de">Deutsch</option><option value="ja">日本語</option></select> ▾</label>
   </div>
   <p class="hint" data-i="controls"></p>
@@ -262,6 +266,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
     <button id="artBtn" class="chip" data-i="story"></button>
     <button id="copyBtn" class="chip" data-i="copy"></button>
     <button id="mapBtn" class="chip" data-i="map" hidden></button>
+    <button id="oProfBtn" class="chip" data-i="profileS"></button>
     <button id="menuBtn" class="chip" data-i="menu"></button>
   </div>
 </section>
@@ -310,6 +315,13 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
   </div>
 </section>
 
+<section id="revive" class="screen" hidden>
+  <h2 data-i="revT"></h2>
+  <p id="rText"></p>
+  <button id="revGo" class="big" data-i="revGo"></button>
+  <button id="revNo" class="chip" data-i="revNo"></button>
+</section>
+
 <section id="pause" class="screen" hidden>
   <h2 data-i="paused"></h2>
   <button id="resumeBtn" class="big" data-i="resume"></button>
@@ -325,13 +337,16 @@ const cv = $('cv'), ctx = cv.getContext('2d');
 /* ---------- tuning ---------- */
 const DT = 1 / 60;
 const R = 0.024;            // body radius (arena units; 1 unit = short side of arena)
-const SPEED = 0.62;         // units / second
+const SPEED = 0.76;         // units / second
 const GEM_R = 0.03, ORB_R = 0.03;
 const GRACE = 30;           // steps at round start when echoes are harmless
-const HIT = R * 2 * 0.78;   // forgiving hitbox
+const HIT = R * 2 * 0.72;   // forgiving hitbox
+const HIT_NEW = R * 2 * 0.6; // even kinder for the first games
+const NEWBIE = 10;          // games that count as "still learning"
 const NEAR = R * 2 + 0.05;  // near-miss zone
 const QUICK = 1.6;          // seconds for a combo grab
 const FRIGHT = 3.2;         // seconds the orb lasts
+const SLOWMO = 3.5;         // seconds the slow-motion orb lasts; echoes move at half speed
 const MAX_ASPECT = 2.0;
 const OTHER = '#ff7a45';    // echoes that aren't yours: level patterns, a friend's challenge
 const MEMC = '#ff4fd8';     // your echoes from earlier levels (reckoning)
@@ -676,6 +691,37 @@ T.ja = {
   streakNone: '今日のエコーを毎日プレイしよう。続くほど報酬が大きくなる。', streakLock: n => `🔥 ${n}日`,
   event: '今週のイベント', evName: '今週のイベント', evLeft: n => `残り${n}日`, evTag: i => `イベント ${i}/5`, evDone: 'イベントクリア！+150 XP'
 };
+// 1.4: second chance, slow motion, sensitivity, profile button
+Object.assign(T.tr, {
+  profile: 'PROFİL', profileS: 'Profil', slow: 'YAVAŞ ÇEKİM', tSlow: 'Mavi saat: geçmişin bir süre yavaşlar!',
+  revT: 'İKİNCİ ŞANS', revText: 'Bu turu baştan oyna. Seni yakalayan yankı silinir.', revTextOther: 'Bu turu baştan oyna.',
+  revGo: 'DEVAM ET', revNo: 'Bitir', revToast: 'Tekrar dene!', sensN: '🎯 Hassasiyet: Normal', sensH: '🎯 Hassasiyet: Yüksek'
+});
+Object.assign(T.en, {
+  profile: 'PROFILE', profileS: 'Profile', slow: 'SLOW MOTION', tSlow: 'Blue clock: your past slows down for a while!',
+  revT: 'SECOND CHANCE', revText: 'Replay this round. The echo that caught you is gone.', revTextOther: 'Replay this round.',
+  revGo: 'CONTINUE', revNo: 'End', revToast: 'Try again!', sensN: '🎯 Sensitivity: Normal', sensH: '🎯 Sensitivity: High'
+});
+Object.assign(T.es, {
+  profile: 'PERFIL', profileS: 'Perfil', slow: 'CÁMARA LENTA', tSlow: 'Reloj azul: ¡tu pasado se ralentiza un rato!',
+  revT: 'SEGUNDA OPORTUNIDAD', revText: 'Repite esta ronda. El eco que te atrapó desaparece.', revTextOther: 'Repite esta ronda.',
+  revGo: 'CONTINUAR', revNo: 'Terminar', revToast: '¡Inténtalo otra vez!', sensN: '🎯 Sensibilidad: Normal', sensH: '🎯 Sensibilidad: Alta'
+});
+Object.assign(T.pt, {
+  profile: 'PERFIL', profileS: 'Perfil', slow: 'CÂMERA LENTA', tSlow: 'Relógio azul: seu passado fica mais lento por um tempo!',
+  revT: 'SEGUNDA CHANCE', revText: 'Jogue esta rodada de novo. O eco que te pegou some.', revTextOther: 'Jogue esta rodada de novo.',
+  revGo: 'CONTINUAR', revNo: 'Encerrar', revToast: 'Tente de novo!', sensN: '🎯 Sensibilidade: Normal', sensH: '🎯 Sensibilidade: Alta'
+});
+Object.assign(T.de, {
+  profile: 'PROFIL', profileS: 'Profil', slow: 'ZEITLUPE', tSlow: 'Blaue Uhr: Deine Vergangenheit wird eine Weile langsamer!',
+  revT: 'ZWEITE CHANCE', revText: 'Spiel diese Runde noch einmal. Das Echo, das dich erwischt hat, ist weg.', revTextOther: 'Spiel diese Runde noch einmal.',
+  revGo: 'WEITER', revNo: 'Beenden', revToast: 'Noch einmal!', sensN: '🎯 Empfindlichkeit: Normal', sensH: '🎯 Empfindlichkeit: Hoch'
+});
+Object.assign(T.ja, {
+  profile: 'プロフィール', profileS: 'プロフィール', slow: 'スローモーション', tSlow: '青い時計：しばらく過去がゆっくりになる！',
+  revT: 'セカンドチャンス', revText: 'このラウンドをやり直そう。君を捕まえたエコーは消える。', revTextOther: 'このラウンドをやり直そう。',
+  revGo: '続ける', revNo: '終わる', revToast: 'もう一度！', sensN: '🎯 感度：ふつう', sensH: '🎯 感度：高い'
+});
 const LANGS = ['tr', 'en', 'es', 'pt', 'de', 'ja'];
 for (const k of LANGS) if (k !== 'en') T[k] = Object.assign({}, T.en, T[k], { ms: Object.assign({}, T.en.ms, (T[k] || {}).ms) }); // missing text falls back to English
 let lang = LANGS.includes(prefs.lang) ? prefs.lang : (LANGS.find(l => (navigator.language || '').toLowerCase().startsWith(l)) || 'en');
@@ -700,38 +746,38 @@ const WALLS = [ // [x, y, w, h] as fractions of the playable box; the centre sta
 ];
 const WORLDS = [
   { tr: ['İlk Ses', 'Sadece sen ve geçmişin. Kural aynı, hedef belli.'], en: ['First Sound', 'Just you and your past. Same rule, a clear goal.'], mod: () => ({}) },
-  { tr: ['Dar Oda', 'Arena her bölümde biraz daha daralıyor.'], en: ['Narrow Room', 'The arena gets a little smaller every level.'], mod: t => ({ box: 0.86 - 0.3 * t }) },
-  { tr: ['Kısa Fitil', 'Altının fitili çok daha hızlı yanıyor.'], en: ['Short Fuse', 'The gold’s fuse burns much faster.'], mod: t => ({ fuse0: 3.8 - 1.0 * t, fuseMin: 2.2 - 0.5 * t }) },
-  { tr: ['Başkalarının Yankıları', 'Burada senden önce birileri dolaşmış. Turuncu izleri hiç durmuyor.'], en: ['Echoes of Others', 'Someone walked here before you. Their orange traces never stop.'], mod: t => ({ pre: 1 + Math.round(t * 4) }) },
+  { tr: ['Dar Oda', 'Arena her bölümde biraz daha daralıyor.'], en: ['Narrow Room', 'The arena gets a little smaller every level.'], mod: t => ({ box: 0.9 - 0.24 * t }) },
+  { tr: ['Kısa Fitil', 'Altının fitili çok daha hızlı yanıyor.'], en: ['Short Fuse', 'The gold’s fuse burns much faster.'], mod: t => ({ fuse0: 4.6 - 0.9 * t, fuseMin: 2.8 - 0.4 * t }) },
+  { tr: ['Başkalarının Yankıları', 'Burada senden önce birileri dolaşmış. Turuncu izleri hiç durmuyor.'], en: ['Echoes of Others', 'Someone walked here before you. Their orange traces never stop.'], mod: t => ({ pre: 1 + Math.round(t * 3) }) },
   { tr: ['Duvarlar', 'Duvarlar seni durdurur. Yankıların ise yollarına devam eder.'], en: ['Walls', 'Walls stop you. Your echoes keep going.'], mod: (t, i) => ({ walls: WALLS[i] }) },
-  { tr: ['Hızlı Geçmiş', 'Yankıların senden hızlı koşuyor.'], en: ['Fast Past', 'Your echoes run faster than you.'], mod: t => ({ echoK: 1.15 + 0.3 * t }) },
-  { tr: ['Karanlık', 'Sadece etrafını görebiliyorsun. Yankılar karanlıktan çıkar.'], en: ['Darkness', 'You only see what’s around you. Echoes step out of the dark.'], mod: t => ({ dark: 0.44 - 0.16 * t }) },
-  { tr: ['Ayna', 'Yankıların ayna görüntün. Sağa gittiysen, o sola gider.'], en: ['Mirror', 'Your echoes are your mirror image. Go right, and they go left.'], mod: t => ({ mirror: true, echoK: 1 + 0.15 * t }) },
-  { tr: ['Kaçan Altın', 'Altın senden kaçıyor. Beklersen uzaklaşır, köşeye sıkıştır.'], en: ['Runaway Gold', 'The gold runs from you. Wait and it gets away; corner it.'], mod: t => ({ flee: 0.1 + 0.12 * t }) },
-  { tr: ['Çift Altın', 'Her turda iki altın var. İkisini de al, sırayı sen seç.'], en: ['Double Gold', 'Two pieces of gold every round. Grab both, in any order.'], mod: t => ({ dbl: true, fuse0: 6.4 - 0.6 * t, fuseMin: 3.6 }) },
-  { tr: ['Dar Karanlık', 'Küçük bir oda ve neredeyse hiç ışık.'], en: ['Dark Room', 'A small room and almost no light.'], mod: t => ({ box: 0.84 - 0.24 * t, dark: 0.46 - 0.14 * t }) },
-  { tr: ['Fırtına', 'Kısa fitil, hızlı geçmiş ve başkalarının izleri. Hepsi birden.'], en: ['Storm', 'Short fuse, fast past and other people’s traces. All at once.'], mod: t => ({ fuse0: 4.2 - 0.8 * t, fuseMin: 2.2, pre: 1 + Math.round(t * 2), echoK: 1.1 + 0.15 * t }) }
+  { tr: ['Hızlı Geçmiş', 'Yankıların senden hızlı koşuyor.'], en: ['Fast Past', 'Your echoes run faster than you.'], mod: t => ({ echoK: 1.1 + 0.22 * t }) },
+  { tr: ['Karanlık', 'Sadece etrafını görebiliyorsun. Yankılar karanlıktan çıkar.'], en: ['Darkness', 'You only see what’s around you. Echoes step out of the dark.'], mod: t => ({ dark: 0.5 - 0.14 * t }) },
+  { tr: ['Ayna', 'Yankıların ayna görüntün. Sağa gittiysen, o sola gider.'], en: ['Mirror', 'Your echoes are your mirror image. Go right, and they go left.'], mod: t => ({ mirror: true, echoK: 1 + 0.1 * t }) },
+  { tr: ['Kaçan Altın', 'Altın senden kaçıyor. Beklersen uzaklaşır, köşeye sıkıştır.'], en: ['Runaway Gold', 'The gold runs from you. Wait and it gets away; corner it.'], mod: t => ({ flee: 0.08 + 0.1 * t }) },
+  { tr: ['Çift Altın', 'Her turda iki altın var. İkisini de al, sırayı sen seç.'], en: ['Double Gold', 'Two pieces of gold every round. Grab both, in any order.'], mod: t => ({ dbl: true, fuse0: 7 - 0.6 * t, fuseMin: 4 }) },
+  { tr: ['Dar Karanlık', 'Küçük bir oda ve neredeyse hiç ışık.'], en: ['Dark Room', 'A small room and almost no light.'], mod: t => ({ box: 0.88 - 0.2 * t, dark: 0.52 - 0.12 * t }) },
+  { tr: ['Fırtına', 'Kısa fitil, hızlı geçmiş ve başkalarının izleri. Hepsi birden.'], en: ['Storm', 'Short fuse, fast past and other people’s traces. All at once.'], mod: t => ({ fuse0: 5 - 0.8 * t, fuseMin: 2.8, pre: 1 + Math.round(t * 1.5), echoK: 1.05 + 0.12 * t }) }
 ];
 const PER_WORLD = 10, BOSS = PER_WORLD - 1;
-const GOALS = [5, 6, 7, 7, 8, 9, 9, 10, 11];
+const GOALS = [4, 5, 5, 6, 6, 7, 7, 8, 8];
 const lid = (w, i) => `w${w + 1}-${i + 1}`;
 function levelCfg(w, i) {
   const boss = i === BOSS, t = boss ? 1 : i / (BOSS - 1);
-  const goal = boss ? 10 : Math.max(4, GOALS[i] - (w >= 4 ? 1 : 0));
-  const c = Object.assign({ w, i, id: lid(w, i), label: `${w + 1}-${i + 1}`, goal, boss, fuse0: 5.2, fuseMin: 2.6, box: 1, pre: 0, walls: null, echoK: 1, dark: 0, mirror: false, flee: 0, dbl: false },
+  const goal = boss ? 9 : Math.max(4, GOALS[i] - (w >= 4 ? 1 : 0));
+  const c = Object.assign({ w, i, id: lid(w, i), label: `${w + 1}-${i + 1}`, goal, boss, fuse0: 5.8, fuseMin: 3, box: 1, pre: 0, walls: null, echoK: 1, dark: 0, mirror: false, flee: 0, dbl: false },
     WORLDS[w].mod(t, boss ? WALLS.length - 1 : i));
   return targets(c);
 }
 // ★★ is a score, ★★★ is a time: the faster you clear it, the better
 function targets(c) {
-  c.s2 = c.goal * 40;
+  c.s2 = c.goal * 32;
   const slow = (c.walls ? 1.35 : 1) * (c.dark ? 1.2 : 1) * (c.pre ? 1.15 : 1) * (c.dbl ? 1.9 : 1) * (c.flee ? 1.25 : 1) * (c.box < 1 ? 0.9 : 1) * (c.boss ? 1.15 : 1);
-  c.t3 = Math.round(c.goal * 2 * slow);
+  c.t3 = Math.round(c.goal * 2.5 * slow);
   return c;
 }
 // weekly event: five levels mixing two worlds' twists; the ISO week picks the pair, so no server is needed
 const EV_PAIRS = [[7, 8], [6, 9], [4, 5], [1, 3], [8, 6], [9, 7], [2, 3], [4, 8], [5, 9], [1, 6]];
-const EV_N = 5, EV_GOALS = [5, 6, 7, 8, 9], EV_XP = 150;
+const EV_N = 5, EV_GOALS = [4, 5, 6, 7, 8], EV_XP = 150;
 function weekKey(d = new Date()) {
   const t = new Date(Date.UTC(d.getFullYear(), d.getMonth(), d.getDate())), day = t.getUTCDay() || 7;
   t.setUTCDate(t.getUTCDate() + 4 - day);
@@ -742,7 +788,7 @@ const evTitle = () => evPair().map(w => tx(WORLDS[w])[0]).join(' + ');
 const evDaysLeft = () => 8 - (new Date().getDay() || 7);
 function eventCfg(i) {
   const wk = weekKey(), [a, b] = evPair(), t = i / (EV_N - 1), wi = (wk + i) % WALLS.length;
-  const c = Object.assign({ w: -1, i, ev: wk, id: `e${wk}-${i + 1}`, label: `E${i + 1}`, goal: EV_GOALS[i], boss: false, fuse0: 5.2, fuseMin: 2.6, box: 1, pre: 0, walls: null, echoK: 1, dark: 0, mirror: false, flee: 0, dbl: false },
+  const c = Object.assign({ w: -1, i, ev: wk, id: `e${wk}-${i + 1}`, label: `E${i + 1}`, goal: EV_GOALS[i], boss: false, fuse0: 5.8, fuseMin: 3, box: 1, pre: 0, walls: null, echoK: 1, dark: 0, mirror: false, flee: 0, dbl: false },
     WORLDS[a].mod(t, wi), WORLDS[b].mod(t, wi));
   return targets(c);
 }
@@ -750,7 +796,7 @@ const evRec = i => prefs.lv[`e${weekKey()}-${i + 1}`] || {};
 const evOpen = i => i === 0 || evRec(i - 1).s > 0;
 function evStars() { let s = 0; for (let i = 0; i < EV_N; i++) s += evRec(i).s || 0; return s; }
 const lrec = (w, i) => prefs.lv[lid(w, i)] || {};
-const NEED = w => w * 12;
+const NEED = w => w * 10;
 function totalStars() { let s = 0; for (const k in prefs.lv) if (k[0] === 'w') s += prefs.lv[k].s || 0; return s; }
 function worldOpen(w) { return DEV || w === 0 || (lrec(w - 1, BOSS).s > 0 && totalStars() >= NEED(w)); }
 function levelOpen(w, i) { return worldOpen(w) && (DEV || i === 0 || lrec(w, i - 1).s > 0); }
@@ -761,7 +807,7 @@ function nextLevel(c) {
 }
 
 /* ---------- progression: xp, missions, unlocks ---------- */
-const need = l => 50 + 25 * l;
+const need = l => 40 + 10 * l;
 function level(xp = prefs.xp) { let l = 1, x = xp; while (x >= need(l)) { x -= need(l); l++; } return { l, x, n: need(l) }; }
 const MS = {
   near1: { n: l => 3 + Math.min(6, l / 3 | 0), one: true, xp: 40 },
@@ -1044,7 +1090,8 @@ let G = { mode: 'menu' };
 let fx = [], texts = [], frame = 0, menuT = 0;
 const ghost = (path, born, col, o) => Object.assign({ path, n: path.length / 2, born, col, wasNear: false, gone: false, dead: false, k: 1 }, o);
 // where a ghost is this step: own echoes replay from the round start, level patterns loop on their own clock
-const gIdx = (g, idx) => g.loop ? (Math.floor(G.tstep * g.k) + g.off) % g.n : Math.floor(idx * g.k);
+// idx is the ghost clock (G.gc), which runs at half speed during slow motion
+const gIdx = (g, idx) => g.loop ? (Math.floor(G.gct * g.k) + g.off) % g.n : Math.floor(idx * g.k);
 
 function startGame(opts) {
   opts = opts || {}; Snd.init();
@@ -1053,7 +1100,7 @@ function startGame(opts) {
   const seed = daily ? hashStr('YANKI-' + todayStr()) : c ? hashStr('YANKI-L-' + c.id) : ch ? ch.seed : (Math.random() * 4294967296) >>> 0;
   G = {
     mode: 'play', opts, kind, daily, cfg: c, seed, round: 1, score: 0, combo: 1, maxCombo: 1, ghosts: [], allPaths: [], rec: [], step: 0, tstep: 0,
-    px: 0, py: 0, vx: 0, vy: 0, gem: null, extra: null, orb: null, fright: 0, frightEats: 0, chal: null, memPool: [], memI: 0, next: null, stars: 0, fever: false, feverGems: 0, log: [], nearAt: 0,
+    px: 0, py: 0, vx: 0, vy: 0, gem: null, extra: null, orb: null, sorb: null, slowmo: 0, gc: 0, gct: 0, grace: GRACE, revived: false, fright: 0, frightEats: 0, chal: null, memPool: [], memI: 0, next: null, stars: 0, fever: false, feverGems: 0, log: [], nearAt: 0,
     fuse: 0, fuseMax: 0, near: 0, eaten: 0, killer: null, deathT: 0, slow: 0, shake: 0, flash: 0, overT: 0, lastTick: 0
   };
   layout();
@@ -1068,7 +1115,7 @@ function startGame(opts) {
     if (!G.memPool.length) addPre(3, rng);
   }
   YOU = pick(SKINS, prefs.skin).col; PALF = pick(PALS, prefs.pal).f;
-  touch.px = touch.py = 0; touch.id = null;
+  touch.px = touch.py = touch.gx = touch.gy = 0; touch.id = null;
   fx = []; texts = []; storyCache = null;
   showScreen(null); $('hud').hidden = false; $('pauseBtn').hidden = false;
   $('hLbl').textContent = c ? L().gold : G.chal ? `${L().echoes} / ${G.chal.n}` : L().echoes;
@@ -1115,9 +1162,10 @@ function memPool(w) {
 }
 
 function newRound(first) {
-  G.rec = []; G.step = 0; G.nearAt = G.near;
-  const c = G.cfg;
-  G.fuseMax = Math.max(c ? c.fuseMin : 2.6, (c ? c.fuse0 : 5.2) - (G.round - 1) * 0.06); G.fuse = G.fuseMax;
+  G.rec = []; G.step = 0; G.gc = 0; G.nearAt = G.near;
+  const c = G.cfg, newbie = prefs.games < NEWBIE;
+  G.grace = GRACE + (newbie ? 20 : 0);
+  G.fuseMax = Math.max(c ? c.fuseMin : 3, (c ? c.fuse0 : 5.8) - (G.round - 1) * 0.06) + (newbie ? 0.8 : 0); G.fuse = G.fuseMax;
   G.ghosts = G.ghosts.filter(g => !g.once);
   G.ghosts.forEach(g => { g.wasNear = false; g.gone = false; });
   const rng = mulberry32((G.seed ^ Math.imul(G.round, 2654435761)) >>> 0);
@@ -1126,12 +1174,14 @@ function newRound(first) {
   else G.gem = place(rng, 0.42, null);
   G.extra = c && c.dbl ? place(rng, 0.3, G.gem) : null;
   G.orb = (G.round >= 5 && G.round % 5 === 0 && G.ghosts.length >= 3) ? place(rng, 0.25, G.gem) : null;
+  G.sorb = (!G.orb && G.round >= 3 && G.round % 4 === 3 && G.ghosts.length >= 2) ? place(rng, 0.25, G.gem) : null;
   if (c && c.boss && G.memPool.length) for (let k = 0; k < 3; k++) G.ghosts.push(ghost(G.memPool[G.memI++ % G.memPool.length], 0, MEMC, { mem: true, once: true, k: c.echoK }));
   const firstGames = prefs.games < 3;
   if (G.round === 1) toast(c ? L().goalToast(c.goal) : G.chal ? L().chalStart(G.chal.name, G.chal.n) : L().t1, 2.2);
   else if (G.round === 2 && firstGames && !G.chal) toast(L().t2, 3.4);
   else if (G.round === 3 && firstGames && !G.chal) toast(L().t3, 3);
   if (G.orb && !prefs.orbSeen) { toast(L().t4, 3); prefs.orbSeen = 1; save(); }
+  if (G.sorb && !prefs.slowSeen) { toast(L().tSlow, 3); prefs.slowSeen = 1; save(); }
   const done = G.round - 1;
   if (!c) { if (done === 10) toast(L().m10, 2.4); else if (done === 20) toast(L().m20, 2.6); else if (done === 30) toast(L().m30, 2.6); else if (done === 50) toast(L().m50, 3); }
 }
@@ -1152,19 +1202,20 @@ function place(rng, minFromPlayer, avoid) {
 /* ---------- input ---------- */
 const keys = new Set();
 const ptr = { mode: 'mouse', x: -1, y: -1, has: false };
-const touch = { id: null, lx: 0, ly: 0, px: 0, py: 0 };
-const TOUCH_GAIN = 1.35;
+const touch = { id: null, lx: 0, ly: 0, px: 0, py: 0, gx: 0, gy: 0 };
+const touchGain = () => prefs.sens ? 1.9 : 1.5;
+const GLIDE = 0.78;         // how much of the last step carries on when the finger pauses
 cv.addEventListener('pointerdown', e => {
   Snd.init();
   if (e.pointerType === 'mouse') { ptr.mode = 'mouse'; ptr.x = e.clientX; ptr.y = e.clientY; ptr.has = true; return; }
-  ptr.mode = 'touch'; touch.id = e.pointerId; touch.lx = e.clientX; touch.ly = e.clientY;
+  ptr.mode = 'touch'; touch.id = e.pointerId; touch.lx = e.clientX; touch.ly = e.clientY; touch.gx = touch.gy = 0;
   try { cv.setPointerCapture(e.pointerId); } catch (err) {}
 });
 cv.addEventListener('pointermove', e => {
   if (e.pointerType === 'mouse') { if (ptr.mode !== 'keys' || Math.abs(e.movementX) + Math.abs(e.movementY) > 2) ptr.mode = 'mouse'; ptr.x = e.clientX; ptr.y = e.clientY; ptr.has = true; return; }
   if (e.pointerId !== touch.id) return;
-  touch.px += (e.clientX - touch.lx) * TOUCH_GAIN / U; touch.py += (e.clientY - touch.ly) * TOUCH_GAIN / U;
-  const m = Math.hypot(touch.px, touch.py); if (m > 0.3) { touch.px *= 0.3 / m; touch.py *= 0.3 / m; }
+  const k = touchGain() / U; touch.px += (e.clientX - touch.lx) * k; touch.py += (e.clientY - touch.ly) * k;
+  const m = Math.hypot(touch.px, touch.py); if (m > 0.12) { touch.px *= 0.12 / m; touch.py *= 0.12 / m; }
   touch.lx = e.clientX; touch.ly = e.clientY;
 });
 const endTouch = e => { if (e.pointerId === touch.id) touch.id = null; };
@@ -1180,6 +1231,7 @@ window.addEventListener('keydown', e => {
     else if (G.mode === 'menu' && !$('lvl').hidden && pendingLvl) { startGame({ level: pendingLvl }); e.preventDefault(); }
     else if (G.mode === 'over' && !$('over').hidden) { startGame(G.next ? { level: G.next } : G.opts); e.preventDefault(); }
     else if (G.mode === 'paused') { resume(); e.preventDefault(); }
+    else if (G.mode === 'revive') { revive(); e.preventDefault(); }
   }
 });
 window.addEventListener('keyup', e => keys.delete(e.key.toLowerCase()));
@@ -1201,6 +1253,10 @@ function inputMove() {
     dx = touch.px; dy = touch.py;
     const m = Math.hypot(dx, dy); if (m > max) { dx = dx / m * max; dy = dy / m * max; }
     touch.px -= dx; touch.py -= dy;
+    // a finger that pauses mid-swipe eases the dot down instead of stopping it dead
+    const gx = touch.gx * GLIDE, gy = touch.gy * GLIDE;
+    if (Math.hypot(dx, dy) < Math.hypot(gx, gy) && dx * gx + dy * gy >= 0) { dx = gx; dy = gy; }
+    touch.gx = dx; touch.gy = dy;
   }
   return [dx, dy];
 }
@@ -1209,7 +1265,7 @@ function botMove(max) {
   const tgt = G.orb && G.ghosts.length > 4 ? G.orb : G.gem;
   let dx = tgt.x - G.px, dy = tgt.y - G.py; let m = Math.hypot(dx, dy) || 1; dx /= m; dy /= m;
   if (!G.fright) for (const g of G.ghosts) {
-    const gi = gIdx(g, G.step); if ((!g.loop && gi >= g.n) || g.dead) continue;
+    const gi = gIdx(g, G.gc); if ((!g.loop && gi >= g.n) || g.dead) continue;
     const i = g.loop ? (gi + 6) % g.n : Math.min(gi + 6, g.n - 1);
     const ex = G.px - g.path[2 * i], ey = G.py - g.path[2 * i + 1], d = Math.hypot(ex, ey);
     if (d < 0.16) { dx += ex / d * (0.16 - d) * 14; dy += ey / d * (0.16 - d) * 14; }
@@ -1227,17 +1283,19 @@ function step() {
   if (nx !== G.px || ny !== G.py) { G.vx = nx - G.px; G.vy = ny - G.py; }
   G.px = nx; G.py = ny;
   G.rec.push(G.px, G.py);
-  const idx = G.step; G.step++; G.tstep++;
+  const idx = G.gc, gs = G.slowmo > 0 ? 0.5 : 1; G.step++; G.tstep++; G.gc += gs; G.gct += gs;
+  const hit = prefs.games < NEWBIE ? HIT_NEW : HIT;
 
   if (G.fright > 0) { G.fright -= DT; if (G.fright <= 0) { G.fright = 0; G.frightEats = 0; } }
+  if (G.slowmo > 0) G.slowmo = Math.max(0, G.slowmo - DT);
 
   for (const g of G.ghosts) {
     if (g.dead) continue;
     const gi = gIdx(g, idx);
     if (!g.loop && gi >= g.n) { if (!g.gone) { g.gone = true; puffAt(g.path[2 * g.n - 2], g.path[2 * g.n - 1], g.col, 10); } continue; }
-    if (idx < GRACE) continue;
+    if (G.step <= G.grace) continue;
     const gx = g.path[2 * gi], gy = g.path[2 * gi + 1], d2 = dist2(gx, gy, G.px, G.py);
-    if (d2 < HIT * HIT) {
+    if (d2 < hit * hit) {
       if (G.fright > 0) { eatGhost(g, gx, gy); continue; }
       return die(g);
     }
@@ -1252,6 +1310,10 @@ function step() {
   if (G.orb && dist2(G.orb.x, G.orb.y, G.px, G.py) < (R + ORB_R) ** 2) {
     burst(G.orb.x, G.orb.y, '#b47cff', 40, 0.7); G.orb = null; G.fright = FRIGHT; G.frightEats = 0;
     toast(L().eat, 1.2); Snd.orb(); buzz(20); G.flash = 0.25;
+  }
+  if (G.sorb && dist2(G.sorb.x, G.sorb.y, G.px, G.py) < (R + ORB_R) ** 2) {
+    burst(G.sorb.x, G.sorb.y, '#5fd4ff', 40, 0.7); G.sorb = null; G.slowmo = SLOWMO;
+    toast(L().slow, 1.4); Snd.orb(); buzz(20); G.flash = 0.2;
   }
   if (G.cfg && G.cfg.flee) flee(G.gem);
   const touching = g => dist2(g.x, g.y, G.px, G.py) < (R + GEM_R) ** 2;
@@ -1318,10 +1380,30 @@ function die(killer) {
 }
 
 function win() {
-  G.mode = 'winning'; G.deathT = 0; G.gem = null; G.extra = null; G.orb = null; G.fever = false; updateHud(true);
+  G.mode = 'winning'; G.deathT = 0; G.gem = null; G.extra = null; G.orb = null; G.sorb = null; G.slowmo = 0; G.fever = false; updateHud(true);
   const last = G.allPaths[G.allPaths.length - 1]; if (last) last.final = true;
   burst(G.px, G.py, '#ffd166', 70, 1); G.flash = 0.35; Snd.win(); Snd.droneOff(); Snd.musOff(); buzz(25);
   toast(L().cleared, 1.6); $('pauseBtn').hidden = true;
+}
+
+// second chance: once a game, outside the daily and challenges, replay the round without the echo that got you
+const canRevive = () => !G.revived && !G.daily && !G.chal && !BOT;
+function offerRevive() {
+  G.mode = 'revive'; $('hud').hidden = true;
+  $('rText').textContent = G.killer && G.killer.pre ? L().revTextOther : L().revText;
+  showScreen('revive');
+  setTimeout(() => { if (G.mode === 'revive') $('revGo').focus({ preventScroll: true }); }, 50);
+}
+function revive() {
+  if (G.mode !== 'revive') return;
+  const k = G.killer;
+  G.revived = true; G.allPaths.pop(); G.log.pop();
+  if (k && !k.pre) G.ghosts = G.ghosts.filter(g => g !== k);
+  G.killer = null; G.combo = 1; G.fever = false; G.fright = 0; G.slowmo = 0;
+  G.mode = 'play'; showScreen(null); $('hud').hidden = false; $('pauseBtn').hidden = false;
+  touch.px = touch.py = touch.gx = touch.gy = 0;
+  newRound(false); G.grace = GRACE * 3; toast(L().revToast, 1.6);
+  Snd.droneOn(); Snd.droneSet(G.ghosts.length); Snd.musOn(); last = performance.now(); acc = 0; updateHud(true);
 }
 
 function killerText(k) {
@@ -1366,7 +1448,7 @@ function gameOver(won) {
   });
   const evDone = !!(won && c && c.ev && c.i === EV_N - 1 && prefs.evDone !== c.ev);
   if (evDone) { prefs.evDone = c.ev; ST.events = (ST.events || 0) + 1; }
-  const xp = n + G.near + 2 * G.eaten + (won ? 15 : 0) + newStars * 10 + done.reduce((s, m) => s + m.xp, 0)
+  const xp = 20 + 3 * n + 2 * G.near + 4 * G.eaten + (won ? 30 : 0) + newStars * 15 + (isBest && n > 2 ? 25 : 0) + done.reduce((s, m) => s + m.xp, 0)
     + (typeof sRw === 'number' ? sRw : 0) + (evDone ? EV_XP : 0);
   prefs.xp += xp;
   const after = level();
@@ -1440,11 +1522,12 @@ function draw(dt) {
     const a = 0.08 + 0.04 * Math.sin(frame * 0.2), B = G.B;
     ctx.fillStyle = `rgba(77,163,255,${a})`; ctx.fillRect(X(B[0]), Y(B[1]), (B[2] - B[0]) * U, (B[3] - B[1]) * U);
   }
-  const idx = G.step;
+  const idx = G.gc;
   for (const g of G.ghosts) if (!g.dead && (g.loop || gIdx(g, idx) < g.n)) drawGhost(g, idx);
+  if (G.slowmo > 0) { const B = G.B; ctx.fillStyle = `rgba(95,212,255,${0.06 + 0.03 * Math.sin(frame * 0.12)})`; ctx.fillRect(X(B[0]), Y(B[1]), (B[2] - B[0]) * U, (B[3] - B[1]) * U); }
   if (G.fever) { const B = G.B; ctx.fillStyle = `rgba(255,120,40,${0.05 + 0.03 * Math.sin(frame * 0.15)})`; ctx.fillRect(X(B[0]), Y(B[1]), (B[2] - B[0]) * U, (B[3] - B[1]) * U); }
   if (G.cfg && G.cfg.dark) drawDark();
-  if (G.gem) drawGem(G.gem); if (G.extra) drawGem(G.extra); if (G.orb) drawOrb();
+  if (G.gem) drawGem(G.gem); if (G.extra) drawGem(G.extra); if (G.orb) drawOrb(); if (G.sorb) drawSorb();
   drawPlayer();
   drawFx();
   if (G.mode === 'dying' && G.killer) {
@@ -1497,7 +1580,7 @@ function drawGhost(g, idx) {
   const i = gIdx(g, idx), p = g.path, x = p[2 * i], y = p[2 * i + 1];
   const fright = G.fright > 0, blink = fright && G.fright < 1 && (frame >> 3) & 1;
   const col = fright ? (blink ? '#ffffff' : '#4da3ff') : g.col;
-  const born = idx < GRACE ? 0.25 + 0.55 * idx / GRACE : 1;
+  const born = G.step < G.grace ? 0.25 + 0.55 * G.step / G.grace : 1;
   ctx.lineCap = 'round'; ctx.lineJoin = 'round';
   // short trail
   ctx.globalAlpha = 0.22 * born; ctx.strokeStyle = col; ctx.lineWidth = R * U * 1.1;
@@ -1557,6 +1640,17 @@ function drawOrb() {
   ctx.fillStyle = '#b47cff'; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
   ctx.fillStyle = '#1a0d33'; ctx.beginPath(); ctx.arc(x, y, r * 0.5, 0, Math.PI * 2); ctx.fill();
   for (let k = 0; k < 3; k++) { const a = t * 3 + k * 2.094; ctx.fillStyle = '#e3d0ff'; ctx.beginPath(); ctx.arc(x + Math.cos(a) * r * 1.7, y + Math.sin(a) * r * 1.7, 2, 0, Math.PI * 2); ctx.fill(); }
+}
+
+// slow-motion orb: a blue clock face
+function drawSorb() {
+  const o = G.sorb, x = X(o.x), y = Y(o.y), r = ORB_R * U, t = frame / 60;
+  ctx.globalCompositeOperation = 'lighter'; const gs = r * 7 * (1 + 0.15 * Math.sin(t * 4)); ctx.drawImage(glow('#5fd4ff'), x - gs / 2, y - gs / 2, gs, gs);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.fillStyle = '#5fd4ff'; ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = '#06222e'; ctx.lineWidth = 2; ctx.lineCap = 'round'; ctx.beginPath();
+  ctx.moveTo(x, y); ctx.lineTo(x + Math.cos(t * 1.5) * r * 0.7, y + Math.sin(t * 1.5) * r * 0.7);
+  ctx.moveTo(x, y); ctx.lineTo(x, y - r * 0.5); ctx.stroke();
 }
 
 function drawFx() {
@@ -1670,9 +1764,16 @@ function download() {
     document.body.appendChild(a); a.click(); a.remove();
   } catch (e) {}
 }
-function copyScore() {
+async function copyScore() {
   const s = shareText();
-  if (NATIVE) { nat('Share', 'share', { title: 'YANKI', text: s }); return; }
+  if ($('art').hidden || !artURL) { try { artURL = makeArt().toDataURL('image/png'); } catch (e) { artURL = ''; } }
+  if (NATIVE) { if (artURL) shareArt(s); else nat('Share', 'share', { title: 'YANKI', text: s }); return; }
+  if (artURL && navigator.canShare) {
+    try {
+      const f = new File([await (await fetch(artURL)).blob()], `yanki-${todayStr()}.png`, { type: 'image/png' });
+      if (navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: s }); return; }
+    } catch (e) { if (e && e.name === 'AbortError') return; }
+  }
   const fail = () => { if ($('art').hidden) openArt(); $('copyBox').textContent = s; $('copyBox').hidden = false; toast(L().copyFail, 2); };
   try { navigator.clipboard.writeText(s).then(() => toast(L().copied, 1.4), fail); } catch (e) { fail(); }
 }
@@ -1756,7 +1857,8 @@ function openLevel(c) {
 
 /* ---------- profile: missions, gallery, stats, looks ---------- */
 let pTab = 'ms';
-function openProfile(tab) { if (tab) pTab = tab; renderProfile(); showScreen('profile'); }
+let profBack = 'menu';
+function openProfile(tab, back) { if (tab) pTab = tab; profBack = back || 'menu'; renderProfile(); showScreen('profile'); }
 function renderProfile() {
   const tabs = [['ms', L().tMissions], ['gal', L().tGallery], ['st', L().tStats], ['look', L().tLooks]];
   $('pTabs').innerHTML = tabs.map(([k, t]) => `<button class="tab${k === pTab ? ' on' : ''}" data-t="${k}">${t}</button>`).join('');
@@ -1791,7 +1893,7 @@ function renderProfile() {
 }
 
 /* ---------- ui ---------- */
-const SCREENS = ['menu', 'over', 'pause', 'art', 'levels', 'lvl', 'profile', 'chal'];
+const SCREENS = ['menu', 'over', 'pause', 'revive', 'art', 'levels', 'lvl', 'profile', 'chal'];
 function showScreen(id) { SCREENS.forEach(s => { $(s).hidden = s !== id; }); }
 let toastTimer = 0;
 function toast(s, d) {
@@ -1820,6 +1922,7 @@ function applyLang() {
   if (NATIVE || matchMedia('(pointer: coarse)').matches) document.querySelector('#menu [data-i="controls"]').textContent = L().controlsTouch;
   $('sndBtn').textContent = prefs.snd ? L().sndOn : L().sndOff; $('sndBtn').classList.toggle('off', !prefs.snd);
   $('musBtn').textContent = prefs.mus ? L().musOn : L().musOff; $('musBtn').classList.toggle('off', !prefs.mus);
+  $('sensBtn').textContent = prefs.sens ? L().sensH : L().sensN;
   $('langSel').value = lang;
   if (NATIVE) { $('dlBtn').textContent = L().shareImg; $('copyBtn').textContent = L().shareScore; document.querySelector('#art [data-i="saveHint"]').hidden = true; }
   refreshMenu();
@@ -1831,12 +1934,14 @@ $('playBtn').onclick = () => startGame({});
 $('dailyBtn').onclick = () => startGame({ daily: true });
 $('levelsBtn').onclick = () => openLevels();
 $('profBtn').onclick = () => openProfile();
+$('oProfBtn').onclick = () => openProfile(null, 'over');
 $('againBtn').onclick = () => startGame(G.opts);
 $('nextBtn').onclick = () => { if (G.next) startGame({ level: G.next }); };
 $('mapBtn').onclick = toLevels;
 $('chalBtn').onclick = shareChallenge;
 $('menuBtn').onclick = toMenu; $('quitBtn').onclick = () => (G.cfg ? toLevels() : toMenu());
 $('resumeBtn').onclick = resume; $('pauseBtn').onclick = pause;
+$('revGo').onclick = revive; $('revNo').onclick = () => { if (G.mode === 'revive') gameOver(false); };
 $('artBtn').onclick = openArt; $('copyBtn').onclick = copyScore; $('dlBtn').onclick = download;
 $('artClose').onclick = () => { if (artBack === 'profile') renderProfile(); showScreen(artBack); };
 $('wPrev').onclick = () => { if (mapW > 0) { mapW--; renderMap(); } };
@@ -1844,10 +1949,11 @@ $('wNext').onclick = () => { if (mapW < WORLDS.length - 1) { mapW++; renderMap()
 $('lvBack').onclick = () => showScreen('menu');
 $('lPlay').onclick = () => { if (pendingLvl) startGame({ level: pendingLvl }); };
 $('lBack').onclick = () => (pendingLvl && pendingLvl.ev ? openEvent() : openLevels());
-$('pBack').onclick = () => { refreshMenu(); showScreen('menu'); };
+$('pBack').onclick = () => { refreshMenu(); showScreen(profBack); };
 $('cPlay').onclick = () => { if (incoming) startGame({ chal: incoming }); };
 $('cBack').onclick = () => showScreen('menu');
 $('sndBtn').onclick = () => { prefs.snd = !prefs.snd; save(); Snd.init(); if (!prefs.snd) Snd.droneOff(); else Snd.tone(660, 0.12, 'triangle', 0.14); applyLang(); };
+$('sensBtn').onclick = () => { prefs.sens = prefs.sens ? 0 : 1; save(); applyLang(); };
 $('musBtn').onclick = () => { prefs.mus = !prefs.mus; save(); Snd.init(); if (!prefs.mus) Snd.musOff(); applyLang(); };
 $('langSel').onchange = () => { lang = $('langSel').value; prefs.lang = lang; save(); applyLang(); };
 $('eventBtn').onclick = openEvent;
@@ -1867,7 +1973,7 @@ function loop(now) {
     while (acc >= DT && guard++ < 6) { acc -= DT; step(); if (G.mode !== 'play') { acc = 0; break; } }
   } else if (G.mode === 'dying' || G.mode === 'winning') {
     G.deathT += dt; sdt = dt * 0.5;
-    if (G.deathT > 1.25) gameOver(G.mode === 'winning');
+    if (G.deathT > 1.25) { if (G.mode === 'dying' && canRevive()) offerRevive(); else gameOver(G.mode === 'winning'); }
   }
   if (G.cfg && G.mode === 'play' && !(frame % 6)) $('hTime').textContent = L().sec((G.tstep * DT).toFixed(1));
   updateFx(sdt);
@@ -1883,7 +1989,7 @@ raf(loop);
 incoming = readChal();
 if (incoming && !BOT) openChal(incoming);
 const shot = /[?&]shot=(\w+)/.exec(location.search);
-if (shot) setTimeout(() => { const s = shot[1]; if (s === 'levels') openLevels(); else if (s === 'lvl') openLevel(levelCfg(0, 2)); else if (s === 'event') openEvent(); else if (s === 'profile') openProfile(); else if (['ms', 'gal', 'st', 'look'].includes(s)) openProfile(s); }, 100);
+if (shot) setTimeout(() => { const s = shot[1]; if (s === 'levels') openLevels(); else if (s === 'lvl') openLevel(levelCfg(0, 2)); else if (s === 'event') openEvent(); else if (s === 'profile') openProfile(); else if (s === 'revive') { startGame({}); die(null); setTimeout(offerRevive, 300); } else if (s === 'slow') { startGame({}); G.sorb = { x: G.px + 0.18, y: G.py - 0.1 }; G.slowmo = 3; G.mode = 'paused'; showScreen(null); } else if (['ms', 'gal', 'st', 'look'].includes(s)) openProfile(s); }, 100);
 if (BOT) {
   const m = /[?&]lvl=w(\d+)-(\d+)/.exec(location.search), me = /[?&]ev=(\d)/.exec(location.search);
   setTimeout(() => startGame(m ? { level: levelCfg(+m[1] - 1, +m[2] - 1) } : me ? { level: eventCfg(+me[1] - 1) } : /daily/.test(location.search) ? { daily: true } : incoming ? { chal: incoming } : {}), 300);

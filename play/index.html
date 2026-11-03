@@ -99,7 +99,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 
 #menu{background:radial-gradient(ellipse at 50% 45%,rgba(6,6,12,.15),rgba(6,6,12,.75) 70%)}
 
-#over{justify-content:flex-end;background:linear-gradient(to bottom,rgba(6,6,12,0) 30%,rgba(6,6,12,.88) 62%,var(--bg))}
+#over{justify-content:flex-end;background:linear-gradient(to bottom,rgba(6,6,12,.6),rgba(6,6,12,.88) 40%,var(--bg))}
 .killer{margin:0;font-size:clamp(15px,4vw,20px);color:var(--past);text-wrap:balance;max-width:34ch}
 .allyou{margin:0;font-size:12px;letter-spacing:.3em;text-transform:uppercase;color:var(--dim)}
 .bigstat{display:flex;align-items:baseline;gap:10px}
@@ -116,6 +116,10 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 #pause{background:rgba(6,6,12,.78)}
 #pause h2{margin:0;font:700 16px var(--f-num);letter-spacing:.4em;color:var(--dim)}
 #revive{background:rgba(6,6,12,.8)}
+#settings{background:rgba(6,6,12,.9)}
+#settings h2{margin:0;font:700 16px var(--f-num);letter-spacing:.4em;color:var(--dim)}
+.setlist{display:flex;flex-direction:column;gap:10px;align-items:stretch;width:min(80vw,280px)}
+.setlist .chip{font-size:15px;padding:12px 18px;justify-content:center;text-align:center}
 #revive h2{margin:0;font:800 clamp(24px,7vw,34px) var(--f-ui);letter-spacing:.08em;color:var(--you)}
 #revive p{margin:0;max-width:30ch;text-align:center;color:var(--dim);font-size:14px;line-height:1.5}
 
@@ -179,8 +183,8 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
 
 /* profile */
 #profile{justify-content:flex-start;gap:12px}
-.tabs{display:flex;gap:6px;flex-wrap:wrap;justify-content:center}
-.tab{font:600 13px var(--f-ui);padding:8px 14px;border-radius:999px;border:1px solid rgba(138,143,179,.35);background:transparent;color:var(--dim);cursor:pointer}
+.tabs{display:flex;gap:5px;flex-wrap:nowrap;justify-content:center;max-width:100%}
+.tab{font:600 12px var(--f-ui);padding:8px 11px;white-space:nowrap;border-radius:999px;border:1px solid rgba(138,143,179,.35);background:transparent;color:var(--dim);cursor:pointer}
 .tab.on{color:var(--bg);background:var(--you);border-color:var(--you)}
 #pBody{flex:1;min-height:0;overflow-y:auto;width:min(100%,460px);touch-action:pan-y;-webkit-overflow-scrolling:touch;text-align:left}
 .ms-card{border:1px solid rgba(138,143,179,.25);border-radius:12px;padding:12px 14px;margin-bottom:10px;background:rgba(10,10,22,.6)}
@@ -235,13 +239,21 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
   <button id="dailyBtn" class="alt"><span data-i="daily">Günün Yankısı</span><small id="dailyBest"></small></button>
   <div class="meta"><span data-i="best">En iyi</span><b id="mBest">0</b></div>
   <button id="profBtn"><em>👤 <span data-i="profile"></span></em><span data-i="lvlWord">Seviye</span><b id="mLvl">1</b><span class="bar"><i id="mBar"></i></span></button>
-  <div class="row">
+  <button id="setBtn" class="chip">⚙️ <span data-i="settings"></span></button>
+  <p class="hint" data-i="controls"></p>
+</section>
+
+<section id="settings" class="screen" hidden>
+  <h2 data-i="settingsT"></h2>
+  <div class="setlist">
     <button id="sndBtn" class="chip tog"></button>
     <button id="musBtn" class="chip tog"></button>
+    <button id="hapBtn" class="chip tog"></button>
     <button id="sensBtn" class="chip tog"></button>
+    <button id="notifBtn" class="chip tog" hidden></button>
     <label class="chip langsel">🌐 <select id="langSel" aria-label="Dil / Language"><option value="tr">Türkçe</option><option value="en">English</option><option value="es">Español</option><option value="pt">Português</option><option value="de">Deutsch</option><option value="ja">日本語</option></select> ▾</label>
   </div>
-  <p class="hint" data-i="controls"></p>
+  <button id="setBack" class="chip" data-i="back"></button>
 </section>
 
 <section id="over" class="screen" hidden>
@@ -263,8 +275,7 @@ button:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
   <button id="againBtn" class="big" data-i="again">TEKRAR</button>
   <div class="row">
     <button id="chalBtn" class="chip" data-i="challenge" hidden></button>
-    <button id="artBtn" class="chip" data-i="story"></button>
-    <button id="copyBtn" class="chip" data-i="copy"></button>
+    <button id="shareBtn" class="chip" data-i="shareImg"></button>
     <button id="mapBtn" class="chip" data-i="map" hidden></button>
     <button id="oProfBtn" class="chip" data-i="profileS"></button>
     <button id="menuBtn" class="chip" data-i="menu"></button>
@@ -344,7 +355,7 @@ const HIT = R * 2 * 0.72;   // forgiving hitbox
 const HIT_NEW = R * 2 * 0.6; // even kinder for the first games
 const NEWBIE = 10;          // games that count as "still learning"
 const NEAR = R * 2 + 0.05;  // near-miss zone
-const QUICK = 1.6;          // seconds for a combo grab
+const QUICK = 2.0;          // seconds for a combo grab
 const FRIGHT = 3.2;         // seconds the orb lasts
 const SLOWMO = 3.5;         // seconds the slow-motion orb lasts; echoes move at half speed
 const MAX_ASPECT = 2.0;
@@ -722,6 +733,43 @@ Object.assign(T.ja, {
   revT: 'セカンドチャンス', revText: 'このラウンドをやり直そう。君を捕まえたエコーは消える。', revTextOther: 'このラウンドをやり直そう。',
   revGo: '続ける', revNo: '終わる', revToast: 'もう一度！', sensN: '🎯 感度：ふつう', sensH: '🎯 感度：高い'
 });
+// 1.5: settings, reminders, the melting-gold warning
+Object.assign(T.tr, {
+  settings: 'Ayarlar', settingsT: 'AYARLAR', hapOn: 'Titreşim: Açık', hapOff: 'Titreşim: Kapalı',
+  notifOn: '🔔 Günlük hatırlatma: Açık', notifOff: '🔔 Günlük hatırlatma: Kapalı', notifDenied: 'Bildirimlere iPhone Ayarlar’dan izin verebilirsin.',
+  remStreak: n => `🔥 ${n} günlük serin bozulmasın! Günün Yankısı seni bekliyor.`, remDaily: 'Günün Yankısı hazır. Bugün kaç kez kendinden kaçabileceksin?',
+  tFuse: 'Altın eriyor! Halka bitmeden yakala.', timeout: 'Altın eridi. Süre bitmeden yakalamalısın.', killShortTime: 'Altın elimde eridi.'
+});
+Object.assign(T.en, {
+  settings: 'Settings', settingsT: 'SETTINGS', hapOn: 'Vibration: On', hapOff: 'Vibration: Off',
+  notifOn: '🔔 Daily reminder: On', notifOff: '🔔 Daily reminder: Off', notifDenied: 'You can allow notifications in your phone’s Settings.',
+  remStreak: n => `🔥 Don’t break your ${n}-day streak! The Daily Echo is waiting.`, remDaily: 'The Daily Echo is ready. How many times can you escape yourself today?',
+  tFuse: 'The gold is melting! Grab it before the ring runs out.', timeout: 'The gold melted. Grab it before time runs out.', killShortTime: 'The gold melted in my hands.'
+});
+Object.assign(T.es, {
+  settings: 'Ajustes', settingsT: 'AJUSTES', hapOn: 'Vibración: Sí', hapOff: 'Vibración: No',
+  notifOn: '🔔 Recordatorio diario: Sí', notifOff: '🔔 Recordatorio diario: No', notifDenied: 'Puedes permitir las notificaciones en los Ajustes del teléfono.',
+  remStreak: n => `🔥 ¡No rompas tu racha de ${n} días! El Eco del Día te espera.`, remDaily: 'El Eco del Día está listo. ¿Cuántas veces escaparás de ti mismo hoy?',
+  tFuse: '¡El oro se derrite! Cógelo antes de que se acabe el anillo.', timeout: 'El oro se derritió. Cógelo antes de que se acabe el tiempo.', killShortTime: 'El oro se me derritió.'
+});
+Object.assign(T.pt, {
+  settings: 'Ajustes', settingsT: 'AJUSTES', hapOn: 'Vibração: Sim', hapOff: 'Vibração: Não',
+  notifOn: '🔔 Lembrete diário: Sim', notifOff: '🔔 Lembrete diário: Não', notifDenied: 'Você pode permitir notificações nos Ajustes do celular.',
+  remStreak: n => `🔥 Não quebre sua sequência de ${n} dias! O Eco do Dia está esperando.`, remDaily: 'O Eco do Dia está pronto. Quantas vezes você vai fugir de si mesmo hoje?',
+  tFuse: 'O ouro está derretendo! Pegue antes que o anel acabe.', timeout: 'O ouro derreteu. Pegue antes que o tempo acabe.', killShortTime: 'O ouro derreteu na minha mão.'
+});
+Object.assign(T.de, {
+  settings: 'Einstellungen', settingsT: 'EINSTELLUNGEN', hapOn: 'Vibration: An', hapOff: 'Vibration: Aus',
+  notifOn: '🔔 Tägliche Erinnerung: An', notifOff: '🔔 Tägliche Erinnerung: Aus', notifDenied: 'Mitteilungen kannst du in den Einstellungen deines Handys erlauben.',
+  remStreak: n => `🔥 Reiß deine ${n}-Tage-Serie nicht ab! Das Tagesecho wartet.`, remDaily: 'Das Tagesecho ist bereit. Wie oft entkommst du dir heute selbst?',
+  tFuse: 'Das Gold schmilzt! Schnapp es, bevor der Ring abläuft.', timeout: 'Das Gold ist geschmolzen. Schnapp es, bevor die Zeit abläuft.', killShortTime: 'Das Gold ist mir geschmolzen.'
+});
+Object.assign(T.ja, {
+  settings: '設定', settingsT: '設定', hapOn: '振動：オン', hapOff: '振動：オフ',
+  notifOn: '🔔 毎日のリマインダー：オン', notifOff: '🔔 毎日のリマインダー：オフ', notifDenied: '通知は端末の設定アプリで許可できます。',
+  remStreak: n => `🔥 ${n}日連続の記録を途切れさせないで！今日のエコーが待っている。`, remDaily: '今日のエコーの準備ができた。今日は何回、自分から逃げられる？',
+  tFuse: '金が溶けていく！リングが消える前に取ろう。', timeout: '金が溶けた。時間切れになる前に取ろう。', killShortTime: '金が手の中で溶けた。'
+});
 const LANGS = ['tr', 'en', 'es', 'pt', 'de', 'ja'];
 for (const k of LANGS) if (k !== 'en') T[k] = Object.assign({}, T.en, T[k], { ms: Object.assign({}, T.en.ms, (T[k] || {}).ms) }); // missing text falls back to English
 let lang = LANGS.includes(prefs.lang) ? prefs.lang : (LANGS.find(l => (navigator.language || '').toLowerCase().startsWith(l)) || 'en');
@@ -763,16 +811,16 @@ const GOALS = [4, 5, 5, 6, 6, 7, 7, 8, 8];
 const lid = (w, i) => `w${w + 1}-${i + 1}`;
 function levelCfg(w, i) {
   const boss = i === BOSS, t = boss ? 1 : i / (BOSS - 1);
-  const goal = boss ? 9 : Math.max(4, GOALS[i] - (w >= 4 ? 1 : 0));
+  const goal = boss ? 7 : Math.max(4, GOALS[i] - (w >= 4 ? 1 : 0));
   const c = Object.assign({ w, i, id: lid(w, i), label: `${w + 1}-${i + 1}`, goal, boss, fuse0: 5.8, fuseMin: 3, box: 1, pre: 0, walls: null, echoK: 1, dark: 0, mirror: false, flee: 0, dbl: false },
     WORLDS[w].mod(t, boss ? WALLS.length - 1 : i));
   return targets(c);
 }
 // ★★ is a score, ★★★ is a time: the faster you clear it, the better
 function targets(c) {
-  c.s2 = c.goal * 32;
+  c.s2 = c.goal * 36;
   const slow = (c.walls ? 1.35 : 1) * (c.dark ? 1.2 : 1) * (c.pre ? 1.15 : 1) * (c.dbl ? 1.9 : 1) * (c.flee ? 1.25 : 1) * (c.box < 1 ? 0.9 : 1) * (c.boss ? 1.15 : 1);
-  c.t3 = Math.round(c.goal * 2.5 * slow);
+  c.t3 = Math.round(c.goal * 2 * slow);
   return c;
 }
 // weekly event: five levels mixing two worlds' twists; the ISO week picks the pair, so no server is needed
@@ -807,7 +855,7 @@ function nextLevel(c) {
 }
 
 /* ---------- progression: xp, missions, unlocks ---------- */
-const need = l => 40 + 10 * l;
+const need = l => 40 + 10 * l + 15 * Math.max(0, l - 10);
 function level(xp = prefs.xp) { let l = 1, x = xp; while (x >= need(l)) { x -= need(l); l++; } return { l, x, n: need(l) }; }
 const MS = {
   near1: { n: l => 3 + Math.min(6, l / 3 | 0), one: true, xp: 40 },
@@ -845,6 +893,9 @@ const SKINS = [
   { id: 'snow', col: '#f4f6ff', at: 5, tr: 'Kar', en: 'Snow' },
   { id: 'lime', col: '#d4ff5a', at: 10, tr: 'Limon', en: 'Lime' },
   { id: 'ice', col: '#a9c8ff', at: 16, tr: 'Buz', en: 'Ice' },
+  { id: 'violet', col: '#c9a2ff', at: 24, tr: 'Lavanta', en: 'Lavender' },
+  { id: 'coral', col: '#ff9f80', at: 32, tr: 'Mercan', en: 'Coral' },
+  { id: 'azure', col: '#6f9bff', at: 42, tr: 'Gece Mavisi', en: 'Night Blue' },
   { id: 'rose', col: '#ffc2e0', at: Infinity, streak: 7, tr: 'Gül', en: 'Rose' }
 ];
 const PALS = [
@@ -853,6 +904,9 @@ const PALS = [
   { id: 'aurora', at: 7, tr: 'Kutup Işığı', en: 'Aurora', f: b => `hsl(${95 + (b * 41) % 190},90%,62%)` },
   { id: 'sunset', at: 13, tr: 'Gün Batımı', en: 'Sunset', f: b => `hsl(${(345 + (b * 17) % 60) % 360},100%,${58 + (b % 3) * 5}%)` },
   { id: 'gold', at: 20, tr: 'Altın Çağ', en: 'Golden Age', f: b => `hsl(${38 + (b * 7) % 18},100%,${52 + (b % 4) * 6}%)` },
+  { id: 'forest', at: 28, tr: 'Orman', en: 'Forest', f: b => `hsl(${95 + (b * 19) % 70},85%,${50 + (b % 3) * 6}%)` },
+  { id: 'midnight', at: 37, tr: 'Gece Yarısı', en: 'Midnight', f: b => `hsl(${215 + (b * 23) % 70},95%,${62 + (b % 3) * 5}%)` },
+  { id: 'prism', at: 50, tr: 'Prizma', en: 'Prism', f: b => `hsl(${(b * 37) % 360},100%,66%)` },
   { id: 'neon', at: Infinity, streak: 14, tr: 'Neon', en: 'Neon', f: b => `hsl(${(b * 53) % 360},100%,64%)` }
 ];
 prefs.unl = prefs.unl || {};
@@ -871,7 +925,10 @@ const NAME_I18N = {
   ice: { es: 'Hielo', pt: 'Gelo', de: 'Eis', ja: 'アイス' }, rose: { es: 'Rosa', pt: 'Rosa', de: 'Rose', ja: 'ローズ' },
   fire: { es: 'Fuego', pt: 'Fogo', de: 'Feuer', ja: '炎' }, ocean: { es: 'Océano', pt: 'Oceano', de: 'Ozean', ja: '海' },
   aurora: { es: 'Aurora', pt: 'Aurora', de: 'Polarlicht', ja: 'オーロラ' }, sunset: { es: 'Atardecer', pt: 'Pôr do Sol', de: 'Sonnenuntergang', ja: '夕焼け' },
-  gold: { es: 'Edad Dorada', pt: 'Era de Ouro', de: 'Goldenes Zeitalter', ja: '黄金時代' }, neon: { es: 'Neón', pt: 'Neon', de: 'Neon', ja: 'ネオン' }
+  gold: { es: 'Edad Dorada', pt: 'Era de Ouro', de: 'Goldenes Zeitalter', ja: '黄金時代' }, neon: { es: 'Neón', pt: 'Neon', de: 'Neon', ja: 'ネオン' },
+  violet: { es: 'Lavanda', pt: 'Lavanda', de: 'Lavendel', ja: 'ラベンダー' }, coral: { es: 'Coral', pt: 'Coral', de: 'Koralle', ja: 'コーラル' },
+  azure: { es: 'Azul Noche', pt: 'Azul Noite', de: 'Nachtblau', ja: 'ナイトブルー' }, forest: { es: 'Bosque', pt: 'Floresta', de: 'Wald', ja: '森' },
+  midnight: { es: 'Medianoche', pt: 'Meia-noite', de: 'Mitternacht', ja: '真夜中' }, prism: { es: 'Prisma', pt: 'Prisma', de: 'Prisma', ja: 'プリズム' }
 };
 SKINS.concat(PALS).forEach(s => Object.assign(s, NAME_I18N[s.id] || {}));
 let YOU = pick(SKINS, prefs.skin).col, PALF = pick(PALS, prefs.pal).f;
@@ -996,6 +1053,7 @@ function nat(plugin, method, arg) {
   catch (e) { return Promise.resolve(null); }
 }
 const buzz = p => {
+  if (prefs.hap === 0) return;
   if (NATIVE) {
     if (Array.isArray(p)) nat('Haptics', 'notification', { type: 'ERROR' });
     else nat('Haptics', 'impact', { style: p <= 8 ? 'LIGHT' : p <= 15 ? 'MEDIUM' : 'HEAVY' });
@@ -1003,6 +1061,33 @@ const buzz = p => {
   }
   try { navigator.vibrate && navigator.vibrate(p); } catch (e) {}
 };
+
+// daily reminder: two local notifications at 19:00, rescheduled whenever the app opens or a daily is played
+const REMIND_ID = 7001;
+async function askReminder() {
+  if (!NATIVE || !NP.LocalNotifications) return false;
+  const r = await nat('LocalNotifications', 'requestPermissions');
+  prefs.notif = r && r.display === 'granted' ? 1 : 0; save();
+  if (prefs.notif) scheduleReminder();
+  return !!prefs.notif;
+}
+async function scheduleReminder() {
+  if (!NATIVE || !NP.LocalNotifications || prefs.notif !== 1) return;
+  await nat('LocalNotifications', 'cancel', { notifications: [{ id: REMIND_ID }, { id: REMIND_ID + 1 }] });
+  const now = new Date(), at = new Date(); at.setHours(19, 0, 0, 0);
+  if (prefs.dailyDate === todayStr() || at <= now) at.setDate(at.getDate() + 1);
+  const then = new Date(at); then.setDate(then.getDate() + 1);
+  const sk = prefs.dailyDate === todayStr() ? prefs.streak || 0 : streakNow();
+  nat('LocalNotifications', 'schedule', { notifications: [
+    { id: REMIND_ID, title: 'YANKI', body: sk ? L().remStreak(sk) : L().remDaily, schedule: { at } },
+    { id: REMIND_ID + 1, title: 'YANKI', body: L().remDaily, schedule: { at: then } }
+  ] });
+}
+// ask for a rating only after a good moment, at most every 40 days (iOS caps it further)
+function maybeRate() {
+  if (!NATIVE || !NP.InAppReview || prefs.games < 6 || Date.now() - (prefs.rateAt || 0) < 40 * 864e5) return;
+  prefs.rateAt = Date.now(); save(); setTimeout(() => nat('InAppReview', 'requestReview'), 1400);
+}
 
 /* ---------- layout ---------- */
 let W = 0, H = 0, DPR = 1, AX = 0, AY = 0, U = 1, AWu = 1, AHu = 1;
@@ -1175,7 +1260,7 @@ function newRound(first) {
   G.extra = c && c.dbl ? place(rng, 0.3, G.gem) : null;
   G.orb = (G.round >= 5 && G.round % 5 === 0 && G.ghosts.length >= 3) ? place(rng, 0.25, G.gem) : null;
   G.sorb = (!G.orb && G.round >= 3 && G.round % 4 === 3 && G.ghosts.length >= 2) ? place(rng, 0.25, G.gem) : null;
-  if (c && c.boss && G.memPool.length) for (let k = 0; k < 3; k++) G.ghosts.push(ghost(G.memPool[G.memI++ % G.memPool.length], 0, MEMC, { mem: true, once: true, k: c.echoK }));
+  if (c && c.boss && G.memPool.length && G.round >= 2) for (let k = 0; k < 2; k++) G.ghosts.push(ghost(G.memPool[G.memI++ % G.memPool.length], 0, MEMC, { mem: true, once: true, k: c.echoK }));
   const firstGames = prefs.games < 3;
   if (G.round === 1) toast(c ? L().goalToast(c.goal) : G.chal ? L().chalStart(G.chal.name, G.chal.n) : L().t1, 2.2);
   else if (G.round === 2 && firstGames && !G.chal) toast(L().t2, 3.4);
@@ -1324,6 +1409,7 @@ function step() {
   }
 
   G.fuse -= DT;
+  if (!prefs.fuseSeen && G.fuse < 2.2 && !BOT) { prefs.fuseSeen = 1; save(); toast(L().tFuse, 2.6); }
   if (G.fuse < 1 && G.fuse > 0 && G.step - G.lastTick >= 15) { G.lastTick = G.step; Snd.tick(); }
   if (G.fuse <= 0) return die(null);
 }
@@ -1487,6 +1573,8 @@ function gameOver(won) {
   showScreen('over');
   setTimeout(() => { if (G.mode === 'over' && !$('over').hidden) (G.next ? $('nextBtn') : $('againBtn')).focus({ preventScroll: true }); }, 50);
   if (BOT && /art/.test(location.search)) setTimeout(openArt, 500);
+  if (G.daily) { if (prefs.notif === undefined) setTimeout(askReminder, 900); else scheduleReminder(); }
+  else if ((isBest && n >= 8) || (won && G.stars === 3 && c.i >= 3)) maybeRate();
 }
 
 function pause() { if (G.mode !== 'play') return; G.mode = 'paused'; showScreen('pause'); Snd.droneOff(); Snd.musOff(); }
@@ -1525,6 +1613,11 @@ function draw(dt) {
   const idx = G.gc;
   for (const g of G.ghosts) if (!g.dead && (g.loop || gIdx(g, idx) < g.n)) drawGhost(g, idx);
   if (G.slowmo > 0) { const B = G.B; ctx.fillStyle = `rgba(95,212,255,${0.06 + 0.03 * Math.sin(frame * 0.12)})`; ctx.fillRect(X(B[0]), Y(B[1]), (B[2] - B[0]) * U, (B[3] - B[1]) * U); }
+  // power-up timers along the top edge of the box
+  if (G.mode === 'play') [[G.slowmo, SLOWMO, '#5fd4ff'], [G.fright, FRIGHT, '#b47cff']].forEach(([v, m, col], k) => {
+    if (v <= 0) return; const B = G.B, w = (B[2] - B[0]) * U;
+    ctx.fillStyle = col; ctx.globalAlpha = 0.85; ctx.fillRect(X(B[0]), Y(B[1]) + 2 + k * 6, w * v / m, 4); ctx.globalAlpha = 1;
+  });
   if (G.fever) { const B = G.B; ctx.fillStyle = `rgba(255,120,40,${0.05 + 0.03 * Math.sin(frame * 0.15)})`; ctx.fillRect(X(B[0]), Y(B[1]), (B[2] - B[0]) * U, (B[3] - B[1]) * U); }
   if (G.cfg && G.cfg.dark) drawDark();
   if (G.gem) drawGem(G.gem); if (G.extra) drawGem(G.extra); if (G.orb) drawOrb(); if (G.sorb) drawSorb();
@@ -1616,14 +1709,17 @@ function drawGem(g) {
   const x = X(g.x), y = Y(g.y), r = GEM_R * U, t = frame / 60;
   const f = clamp(G.fuse / G.fuseMax, 0, 1);
   const ringCol = f < 0.3 ? (frame >> 2 & 1 ? '#ff3d6e' : '#ffd166') : '#ffd166';
+  // the last two seconds: the gold trembles and reddens
+  const hurry = G.mode === 'play' && G.fuse < 2 ? 1 - G.fuse / 2 : 0;
+  const jx = hurry ? Math.sin(frame * 1.9) * hurry * 2.2 : 0;
   ctx.globalCompositeOperation = 'lighter'; ctx.globalAlpha = 0.9;
   const gs = r * 6 * (1 + 0.08 * Math.sin(t * 6)); ctx.drawImage(glow('#ffd166'), x - gs / 2, y - gs / 2, gs, gs);
   ctx.globalCompositeOperation = 'source-over'; ctx.globalAlpha = 1;
   // fuse ring: the round's clock lives on the gold itself
   ctx.strokeStyle = 'rgba(255,209,102,.15)'; ctx.lineWidth = 3; ctx.beginPath(); ctx.arc(x, y, r * 2.1, 0, Math.PI * 2); ctx.stroke();
   ctx.strokeStyle = ringCol; ctx.lineWidth = 3; ctx.lineCap = 'round'; ctx.beginPath(); ctx.arc(x, y, r * 2.1, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * f); ctx.stroke();
-  ctx.save(); ctx.translate(x, y); ctx.rotate(t * 1.6);
-  ctx.fillStyle = '#ffd166'; ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * 0.8, 0); ctx.lineTo(0, r); ctx.lineTo(-r * 0.8, 0); ctx.closePath(); ctx.fill();
+  ctx.save(); ctx.translate(x + jx, y); ctx.rotate(t * (1.6 + hurry * 6));
+  ctx.fillStyle = hurry ? `rgb(255,${209 - 140 * hurry | 0},${102 - 40 * hurry | 0})` : '#ffd166'; ctx.beginPath(); ctx.moveTo(0, -r); ctx.lineTo(r * 0.8, 0); ctx.lineTo(0, r); ctx.lineTo(-r * 0.8, 0); ctx.closePath(); ctx.fill();
   ctx.fillStyle = '#fff4cf'; ctx.beginPath(); ctx.moveTo(0, -r * 0.45); ctx.lineTo(r * 0.35, 0); ctx.lineTo(0, r * 0.45); ctx.lineTo(-r * 0.35, 0); ctx.closePath(); ctx.fill();
   ctx.restore();
   // what it's worth right now; it melts with the fuse
@@ -1774,7 +1870,8 @@ async function copyScore() {
       if (navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: s }); return; }
     } catch (e) { if (e && e.name === 'AbortError') return; }
   }
-  const fail = () => { if ($('art').hidden) openArt(); $('copyBox').textContent = s; $('copyBox').hidden = false; toast(L().copyFail, 2); };
+  if ($('art').hidden) showArt('over');
+  const fail = () => { $('copyBox').textContent = s; $('copyBox').hidden = false; toast(L().copyFail, 2); };
   try { navigator.clipboard.writeText(s).then(() => toast(L().copied, 1.4), fail); } catch (e) { fail(); }
 }
 
@@ -1893,7 +1990,7 @@ function renderProfile() {
 }
 
 /* ---------- ui ---------- */
-const SCREENS = ['menu', 'over', 'pause', 'revive', 'art', 'levels', 'lvl', 'profile', 'chal'];
+const SCREENS = ['menu', 'settings', 'over', 'pause', 'revive', 'art', 'levels', 'lvl', 'profile', 'chal'];
 function showScreen(id) { SCREENS.forEach(s => { $(s).hidden = s !== id; }); }
 let toastTimer = 0;
 function toast(s, d) {
@@ -1923,8 +2020,11 @@ function applyLang() {
   $('sndBtn').textContent = prefs.snd ? L().sndOn : L().sndOff; $('sndBtn').classList.toggle('off', !prefs.snd);
   $('musBtn').textContent = prefs.mus ? L().musOn : L().musOff; $('musBtn').classList.toggle('off', !prefs.mus);
   $('sensBtn').textContent = prefs.sens ? L().sensH : L().sensN;
+  $('hapBtn').textContent = prefs.hap === 0 ? L().hapOff : L().hapOn; $('hapBtn').classList.toggle('off', prefs.hap === 0);
+  $('notifBtn').hidden = !NATIVE || !NP.LocalNotifications;
+  $('notifBtn').textContent = prefs.notif === 1 ? L().notifOn : L().notifOff; $('notifBtn').classList.toggle('off', prefs.notif !== 1);
   $('langSel').value = lang;
-  if (NATIVE) { $('dlBtn').textContent = L().shareImg; $('copyBtn').textContent = L().shareScore; document.querySelector('#art [data-i="saveHint"]').hidden = true; }
+  if (NATIVE) { $('dlBtn').textContent = L().shareImg; document.querySelector('#art [data-i="saveHint"]').hidden = true; }
   refreshMenu();
 }
 function toMenu() { G = { mode: 'menu' }; fx = []; texts = []; Snd.droneOff(); Snd.musOff(); $('hud').hidden = true; $('pauseBtn').hidden = true; refreshMenu(); showScreen('menu'); }
@@ -1942,7 +2042,7 @@ $('chalBtn').onclick = shareChallenge;
 $('menuBtn').onclick = toMenu; $('quitBtn').onclick = () => (G.cfg ? toLevels() : toMenu());
 $('resumeBtn').onclick = resume; $('pauseBtn').onclick = pause;
 $('revGo').onclick = revive; $('revNo').onclick = () => { if (G.mode === 'revive') gameOver(false); };
-$('artBtn').onclick = openArt; $('copyBtn').onclick = copyScore; $('dlBtn').onclick = download;
+$('shareBtn').onclick = copyScore; $('dlBtn').onclick = download;
 $('artClose').onclick = () => { if (artBack === 'profile') renderProfile(); showScreen(artBack); };
 $('wPrev').onclick = () => { if (mapW > 0) { mapW--; renderMap(); } };
 $('wNext').onclick = () => { if (mapW < WORLDS.length - 1) { mapW++; renderMap(); } };
@@ -1953,6 +2053,14 @@ $('pBack').onclick = () => { refreshMenu(); showScreen(profBack); };
 $('cPlay').onclick = () => { if (incoming) startGame({ chal: incoming }); };
 $('cBack').onclick = () => showScreen('menu');
 $('sndBtn').onclick = () => { prefs.snd = !prefs.snd; save(); Snd.init(); if (!prefs.snd) Snd.droneOff(); else Snd.tone(660, 0.12, 'triangle', 0.14); applyLang(); };
+$('setBtn').onclick = () => showScreen('settings');
+$('setBack').onclick = () => { refreshMenu(); showScreen('menu'); };
+$('hapBtn').onclick = () => { prefs.hap = prefs.hap === 0 ? 1 : 0; save(); applyLang(); buzz(12); };
+$('notifBtn').onclick = async () => {
+  if (prefs.notif === 1) { prefs.notif = 0; save(); nat('LocalNotifications', 'cancel', { notifications: [{ id: REMIND_ID }, { id: REMIND_ID + 1 }] }); applyLang(); return; }
+  if (!(await askReminder())) toast(L().notifDenied, 3);
+  applyLang();
+};
 $('sensBtn').onclick = () => { prefs.sens = prefs.sens ? 0 : 1; save(); applyLang(); };
 $('musBtn').onclick = () => { prefs.mus = !prefs.mus; save(); Snd.init(); if (!prefs.mus) Snd.musOff(); applyLang(); };
 $('langSel').onchange = () => { lang = $('langSel').value; prefs.lang = lang; save(); applyLang(); };
@@ -1981,7 +2089,7 @@ function loop(now) {
   raf(loop);
 }
 
-fillMissions(); save();
+fillMissions(); save(); scheduleReminder();
 window.addEventListener('resize', resize);
 resize(); applyLang();
 if (document.fonts && document.fonts.load) { document.fonts.load('40px Monoton').catch(() => {}); document.fonts.load('700 20px "JetBrains Mono"').catch(() => {}); }
@@ -1989,7 +2097,7 @@ raf(loop);
 incoming = readChal();
 if (incoming && !BOT) openChal(incoming);
 const shot = /[?&]shot=(\w+)/.exec(location.search);
-if (shot) setTimeout(() => { const s = shot[1]; if (s === 'levels') openLevels(); else if (s === 'lvl') openLevel(levelCfg(0, 2)); else if (s === 'event') openEvent(); else if (s === 'profile') openProfile(); else if (s === 'revive') { startGame({}); die(null); setTimeout(offerRevive, 300); } else if (s === 'slow') { startGame({}); G.sorb = { x: G.px + 0.18, y: G.py - 0.1 }; G.slowmo = 3; G.mode = 'paused'; showScreen(null); } else if (['ms', 'gal', 'st', 'look'].includes(s)) openProfile(s); }, 100);
+if (shot) setTimeout(() => { const s = shot[1]; if (s === 'levels') openLevels(); else if (s === 'lvl') openLevel(levelCfg(0, 2)); else if (s === 'event') openEvent(); else if (s === 'profile') openProfile(); else if (s === 'settings') showScreen('settings'); else if (s === 'revive') { startGame({}); die(null); setTimeout(offerRevive, 300); } else if (s === 'slow') { startGame({}); G.sorb = { x: G.px + 0.18, y: G.py - 0.1 }; G.slowmo = 3; G.mode = 'paused'; showScreen(null); } else if (['ms', 'gal', 'st', 'look'].includes(s)) openProfile(s); }, 100);
 if (BOT) {
   const m = /[?&]lvl=w(\d+)-(\d+)/.exec(location.search), me = /[?&]ev=(\d)/.exec(location.search);
   setTimeout(() => startGame(m ? { level: levelCfg(+m[1] - 1, +m[2] - 1) } : me ? { level: eventCfg(+me[1] - 1) } : /daily/.test(location.search) ? { daily: true } : incoming ? { chal: incoming } : {}), 300);
